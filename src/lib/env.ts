@@ -6,8 +6,8 @@ const EnvSchema = z.object({
   DATA_GO_KR_SERVICE_KEY: required,
   KOSIS_API_KEY: required,
   GEMINI_API_KEY: required,
-  GEMINI_MODEL: required.default("gemini-flash-latest"),
-  GEMINI_FALLBACK_MODEL: required.default("gemini-flash-lite-latest"),
+  GEMINI_MODEL: required.default("gemini-flash-lite-latest"), // 무료 티어에서 빠르고 안정적 (2026-10-06 실측)
+  GEMINI_FALLBACK_MODEL: required.default("gemini-flash-latest"),
   AI_DAILY_LIMIT: z.coerce.number().int().positive().default(100),
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: required,
