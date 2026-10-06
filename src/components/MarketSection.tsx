@@ -15,7 +15,7 @@ export function MarketSection({ category, summary }: { category: MarketCategoryC
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Card label={`월 거래액 (${formatMonth(summary.asOf)})`} value={formatKrwMillion(summary.latest)} />
-        <Card label="시장 성장률 (최근 3개월, 전년 대비)" value={formatSignedPercent(summary.yoy)} />
+        <Card label="시장 성장률 (최근 12개월, 전년 대비)" value={formatSignedPercent(summary.yoy)} />
         <Card label="최근 12개월 거래액" value={formatKrwMillion(summary.recent12Total)} />
       </div>
       <MarketChart title={`${name} 온라인 거래액 (월)`} series={summary.series} />
