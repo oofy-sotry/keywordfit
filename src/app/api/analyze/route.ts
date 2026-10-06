@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { getImportSummary } from "@/lib/customs/imports";
 import { HS_CODE_PATTERN, normalizeHsInput } from "@/lib/hs/code";
+import { hsIndex } from "@/lib/hs/hsIndex";
 import { isMarketCategory } from "@/lib/kosis/categories";
 import { getMarketSummary } from "@/lib/kosis/market";
 import { toOpportunitySection } from "@/lib/opportunity";
@@ -9,7 +10,8 @@ import { toSection } from "@/lib/section";
 
 const Query = z
   .object({
-    hs: z.string().transform(normalizeHsInput).pipe(z.string().regex(HS_CODE_PATTERN)).optional(),
+    // 형식 + 코드표 존재 확인 (관세청은 특수용도 코드 999999 등에도 데이터를 줌)
+    hs: z.string().transform(normalizeHsInput).pipe(z.string().regex(HS_CODE_PATTERN).refine(hsIndex.exists)).optional(),
     category: z.string().refine(isMarketCategory).optional(),
   })
   .refine((q) => q.hs || q.category, "hs 또는 category 중 하나는 필요");
