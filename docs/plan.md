@@ -20,7 +20,7 @@
 - [x] KOSIS 온라인쇼핑동향 표 확정: `DT_1KE10041`, `itmId=T20`, `objL1=ALL`, `objL2=00`
 - [x] 공공데이터포털에서 "관세청_HS부호" + "HS부호 단위별 품목명" XLSX 다운로드 → `data/raw/`
 - [x] Google AI Studio에서 Gemini 키 발급 (무료, 결제 설정 안 함)
-- [ ] Supabase Free 프로젝트 생성 (Seoul) ✅, `api_cache` 테이블 ❌ (DB 비밀번호 인증 실패 — 2026-10-06)
+- [x] Supabase Free 프로젝트 생성 (Seoul), `api_cache` 테이블 (2026-10-06, 마이그레이션 적용·RLS 확인)
 - [x] Next.js 16.3.8(App Router, TS, Tailwind) 셋업, Vitest 설치, git init
 - [x] `.gitignore`에 `.env*` + `!.env.example` → 첫 커밋 전 `git status`로 키 파일 없는지 확인
 - [x] `.env.example`, `src/lib/env.ts`(zod) + 테스트 6개
