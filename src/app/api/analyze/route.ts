@@ -1,11 +1,11 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { getImportSummary } from "@/lib/customs/imports";
-import { HS_CODE_PATTERN } from "@/lib/customs/trade";
+import { HS_CODE_PATTERN, normalizeHsInput } from "@/lib/hs/code";
 import { toSection } from "@/lib/section";
 
 const Query = z.object({
-  hs: z.string().trim().regex(HS_CODE_PATTERN),
+  hs: z.string().transform(normalizeHsInput).pipe(z.string().regex(HS_CODE_PATTERN)),
 });
 
 export async function GET(request: NextRequest) {
