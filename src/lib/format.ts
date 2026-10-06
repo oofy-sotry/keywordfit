@@ -21,6 +21,7 @@ export function formatUsd(usd: number): string {
 /** KOSIS 거래액(백만원 단위)을 조·억·만원으로 짧게. */
 export function formatKrwMillion(million: number | null): string {
   if (million === null) return "—";
+  if (million === 0) return "0";
   if (Math.abs(million) >= 1e6) return `${(million / 1e6).toFixed(2)}조원`;
   if (Math.abs(million) >= 100) return `${integer.format(Math.round(million / 100))}억원`;
   return `${integer.format(million * 100)}만원`;
