@@ -2,7 +2,7 @@
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartFrame, gridProps, monthAxisProps, TooltipBox, valueAxisProps } from "@/components/chartTheme";
-import { formatKrwMillion, formatMonth } from "@/lib/format";
+import { formatKrwMillion, formatMonth, krwAxisFormatter } from "@/lib/format";
 import type { MonthlyMarket } from "@/lib/metrics";
 
 function MarketTooltip({ active, payload }: { active?: boolean; payload?: { payload: MonthlyMarket }[] }) {
@@ -17,13 +17,15 @@ function MarketTooltip({ active, payload }: { active?: boolean; payload?: { payl
 
 /** 상품군 온라인 거래액 24개월 */
 export function MarketChart({ title, series }: { title: string; series: MonthlyMarket[] }) {
+  // 한 축에 조·억이 섞이지 않게 최댓값 기준 단위 하나로
+  const axisFormatter = krwAxisFormatter(Math.max(0, ...series.map((m) => m.amount ?? 0)));
   return (
     <ChartFrame title={title}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid {...gridProps} />
           <XAxis {...monthAxisProps} />
-          <YAxis {...valueAxisProps} tickFormatter={formatKrwMillion} width={64} domain={[0, "auto"]} />
+          <YAxis {...valueAxisProps} tickFormatter={axisFormatter} width={64} domain={[0, "auto"]} />
           <Tooltip content={<MarketTooltip />} cursor={{ stroke: "var(--text-muted)", strokeDasharray: "3 3" }} />
           <Line
             type="linear"
