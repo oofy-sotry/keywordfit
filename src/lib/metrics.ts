@@ -73,7 +73,8 @@ const YEAR = 12;
 /** 관세청 행들을 화면용 수입 요약으로 만든다. 공표된 데이터가 하나도 없으면 null. */
 export function summarizeImports(rows: TradeRow[], months: Yyyymm[]): ImportSummary | null {
   const series = sumImportsByMonth(rows, months).slice(-SERIES_MONTHS);
-  if (series.length === 0) return null;
+  // 수입액이 전부 0이면 의미 없는 데이터 (특수용도 코드 등) → 없음으로
+  if (series.length === 0 || series.every((m) => m.usd === 0)) return null;
 
   const sumUsd = (list: MonthlyImport[]) => list.reduce((sum, m) => sum + m.usd, 0);
   const recent = series.slice(-YEAR);
