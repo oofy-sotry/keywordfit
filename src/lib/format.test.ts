@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMonth, formatShortMonth, formatSignedPercent, formatUsd } from "./format";
+import { formatKrwMillion, formatMonth, formatShortMonth, formatSignedPercent, formatUsd } from "./format";
 
 describe("formatMonth", () => {
   it("YYYYMM을 YYYY.MM으로", () => {
@@ -30,5 +30,17 @@ describe("formatSignedPercent", () => {
 
   it("null은 대시", () => {
     expect(formatSignedPercent(null)).toBe("—");
+  });
+});
+
+describe("formatKrwMillion", () => {
+  it("백만원 단위 값을 조·억으로 줄인다", () => {
+    expect(formatKrwMillion(1_337_360)).toBe("1.34조원");
+    expect(formatKrwMillion(268_495)).toBe("2,685억원");
+    expect(formatKrwMillion(50)).toBe("5,000만원");
+  });
+
+  it("null은 대시", () => {
+    expect(formatKrwMillion(null)).toBe("—");
   });
 });
