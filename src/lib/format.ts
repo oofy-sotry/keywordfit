@@ -42,3 +42,35 @@ export function formatSignedPercent(value: number | null): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
 }
+
+/** [받침 있을 때, 받침 없을 때] */
+const PARTICLES: [string, string][] = [
+  ["이", "가"],
+  ["은", "는"],
+  ["을", "를"],
+  ["과", "와"],
+  ["으로", "로"],
+];
+const RIEUL = 8; // ㄹ 받침 인덱스
+
+/** 값의 끝 받침: 받침 인덱스(0=없음), 판단 불가면 null. %는 "퍼센트"(받침 없음)로 읽는다. */
+function finalConsonant(value: string): number | null {
+  const last = value.trim().at(-1);
+  if (!last) return null;
+  if (last === "%") return 0;
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return null;
+  return (code - 0xac00) % 28;
+}
+
+/**
+ * 자리표시자에 채운 값 뒤의 조사를 받침에 맞게 고친다 (AI는 값을 모른 채 조사를 쓰므로 "미국가"처럼 어긋남).
+ * 모르는 조사이거나 끝 글자로 판단할 수 없으면 그대로 둔다.
+ */
+export function fixParticle(value: string, particle: string): string {
+  const pair = PARTICLES.find((p) => p.includes(particle));
+  const jong = finalConsonant(value);
+  if (!pair || jong === null) return particle;
+  if (pair[0] === "으로") return jong === 0 || jong === RIEUL ? "로" : "으로";
+  return jong === 0 ? pair[1] : pair[0];
+}
