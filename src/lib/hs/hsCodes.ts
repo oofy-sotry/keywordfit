@@ -39,22 +39,36 @@ export function createHsIndex(data: HsData) {
     return { info, label: info.label, heading: info.heading, children: children.get(code)!.join(" ") };
   });
 
-  /** 품명 검색 (AI 분류 실패 시 대체). 표시명 > 하위 품명 > 호 이름 순으로 가중치. */
+  /**
+   * 품명 검색 (AI 분류 실패 시 대체). 관세 품목표는 공식 용어라 일상 상품명과 잘 안 맞는다 — 보조 수단.
+   * 1) 띄어쓴 단어: 단어마다 가장 잘 맞는 위치 하나만 (표시명 3 > 하위 품명 2 > 호 이름 1) × 단어 길이
+   * 2) 단어로 하나도 못 찾으면(붙여 쓴 입력 등) 글자 쌍(bigram) 일치로 대체
+   */
   function search(query: string, limit = 5): Hs6[] {
-    const grams = bigrams(query);
     const words = query.split(/\s+/).filter((w) => w.length >= 2);
+    const grams = bigrams(query);
     if (grams.length === 0) return [];
 
-    const scored = entries.map((entry) => {
-      const score = (text: string) =>
-        words.filter((w) => text.includes(w)).length * 2 + grams.filter((g) => text.includes(g)).length;
-      return { info: entry.info, score: score(entry.label) * 3 + score(entry.children) * 2 + score(entry.heading) };
-    });
-    // 글자 쌍이 절반 이상 맞아야 후보 (우연한 한 글자쌍 일치 제외)
-    const minScore = Math.ceil(grams.length / 2);
+    const fields = (e: (typeof entries)[number]) => [
+      [e.label, 3],
+      [e.children, 2],
+      [e.heading, 1],
+    ] as const;
+    const wordScore = (e: (typeof entries)[number]) =>
+      words.reduce((sum, w) => sum + w.length * Math.max(0, ...fields(e).map(([t, weight]) => (t.includes(w) ? weight : 0))), 0);
+    const gramScore = (e: (typeof entries)[number]) =>
+      fields(e).reduce((sum, [t, weight]) => sum + weight * grams.filter((g) => t.includes(g)).length, 0);
+
+    // 단어 점수가 주 기준, 글자 쌍 점수는 동점일 때 보조 기준
+    let scored = entries.map((e) => ({ info: e.info, score: wordScore(e) > 0 ? wordScore(e) * 100 + gramScore(e) : 0 }));
+    if (!scored.some((s) => s.score > 0)) {
+      // 글자 쌍이 절반 이상 맞아야 후보 (우연한 한 글자쌍 일치 제외)
+      const minScore = Math.ceil(grams.length / 2);
+      scored = entries.map((e) => ({ info: e.info, score: gramScore(e) })).map((s) => (s.score >= minScore ? s : { ...s, score: 0 }));
+    }
     return scored
-      .filter((s) => s.score >= minScore)
-      .sort((a, b) => b.score - a.score || a.info.code.localeCompare(b.info.code))
+      .filter((s) => s.score > 0)
+      .sort((x, y) => y.score - x.score || x.info.code.localeCompare(y.info.code))
       .slice(0, limit)
       .map((s) => s.info);
   }
