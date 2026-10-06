@@ -93,12 +93,10 @@ export type MonthlyMarket = { month: Yyyymm; amount: number | null };
 export type MarketSummary = {
   series: MonthlyMarket[]; // 최근 24개월, 단위 백만원
   latest: number | null; // 최신 월 거래액
-  yoy: number | null; // 최근 3개월 합 vs 전년 동기 3개월 합
+  yoy: number | null; // 최근 12개월 합 vs 직전 12개월 합 (수입 지표와 같은 기간)
   recent12Total: number | null; // 최근 12개월 합 (빈 달이 있거나 12개월 미만이면 null)
   asOf: Yyyymm;
 };
-
-const MARKET_YOY_MONTHS = 3;
 
 /** KOSIS 행들을 화면용 시장 요약으로 만든다. 값이 있는 달이 하나도 없으면 null. */
 export function summarizeMarket(rows: MarketRow[]): MarketSummary | null {
@@ -108,14 +106,12 @@ export function summarizeMarket(rows: MarketRow[]): MarketSummary | null {
 
   const sumOf = (list: MonthlyMarket[]) =>
     list.every((m) => m.amount !== null) ? list.reduce((sum, m) => sum + m.amount!, 0) : null;
-  const recent = all.slice(-MARKET_YOY_MONTHS);
-  const lastYear = all.slice(-(YEAR + MARKET_YOY_MONTHS), -YEAR);
-  const recentSum = sumOf(recent);
-  const lastYearSum = lastYear.length === MARKET_YOY_MONTHS ? sumOf(lastYear) : null;
-  const yoy = recentSum !== null && lastYearSum !== null ? calcYoy(recentSum, lastYearSum) : null;
-
+  // 3개월 비교는 한 분기 등락에 크게 흔들려(통신기기 3개월 +67% vs 12개월 +30%) D6에 12개월로 변경
   const recent12 = all.slice(-YEAR);
+  const previous12 = all.slice(-YEAR * 2, -YEAR);
   const recent12Total = recent12.length === YEAR ? sumOf(recent12) : null;
+  const previous12Total = previous12.length === YEAR ? sumOf(previous12) : null;
+  const yoy = recent12Total !== null && previous12Total !== null ? calcYoy(recent12Total, previous12Total) : null;
 
   const last = series[series.length - 1];
   return { series, latest: last.amount, yoy, recent12Total, asOf: last.month };
