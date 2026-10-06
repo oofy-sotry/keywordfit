@@ -1,0 +1,87 @@
+import { describe, expect, it } from "vitest";
+import type { TradeRow } from "@/lib/customs/parse";
+import { calcUnitPrice, calcYoy, sumImportsByMonth, topImportShares } from "./metrics";
+
+function row(month: string, countryName: string, importUsd: number, importKg: number): TradeRow {
+  return {
+    month,
+    hsCode: "8518309000",
+    countryCode: countryName.slice(0, 2),
+    countryName,
+    importUsd,
+    importKg,
+    exportUsd: 0,
+    exportKg: 0,
+  };
+}
+
+describe("calcUnitPrice", () => {
+  it("kg당 달러 단가를 소수 2자리로", () => {
+    expect(calcUnitPrice(1000, 3)).toBe(333.33);
+  });
+
+  it("중량이 0 이하면 null", () => {
+    expect(calcUnitPrice(1000, 0)).toBeNull();
+  });
+});
+
+describe("calcYoy", () => {
+  it("증감률을 % 소수 1자리로", () => {
+    expect(calcYoy(123, 100)).toBe(23);
+    expect(calcYoy(90, 120)).toBe(-25);
+    expect(calcYoy(1001, 1000)).toBe(0.1);
+  });
+
+  it("직전 값이 0 이하면 null", () => {
+    expect(calcYoy(100, 0)).toBeNull();
+  });
+});
+
+describe("sumImportsByMonth", () => {
+  const rows = [
+    row("202606", "중국", 100, 10),
+    row("202606", "베트남", 50, 5),
+    row("202608", "중국", 30, 0),
+  ];
+
+  it("월별로 국가·하위 코드를 합산하고 단가를 계산한다", () => {
+    expect(sumImportsByMonth(rows, ["202606", "202607", "202608"])).toEqual([
+      { month: "202606", usd: 150, kg: 15, unitPrice: 10 },
+      { month: "202607", usd: 0, kg: 0, unitPrice: null },
+      { month: "202608", usd: 30, kg: 0, unitPrice: null },
+    ]);
+  });
+
+  it("끝쪽에 데이터가 전혀 없는 달은 미공표로 보고 잘라낸다", () => {
+    const result = sumImportsByMonth(rows, ["202606", "202607", "202608", "202609", "202610"]);
+    expect(result.map((r) => r.month)).toEqual(["202606", "202607", "202608"]);
+  });
+});
+
+describe("topImportShares", () => {
+  const rows = [
+    row("202607", "중국", 600, 1),
+    row("202608", "중국", 200, 1),
+    row("202608", "베트남", 100, 1),
+    row("202608", "미국", 60, 1),
+    row("202608", "일본", 40, 1),
+  ];
+
+  it("수입액 기준 상위 n개국 점유율(%)을 내림차순으로, 나머지는 기타로 묶는다", () => {
+    expect(topImportShares(rows, 2)).toEqual([
+      { name: "중국", share: 80 },
+      { name: "베트남", share: 10 },
+      { name: "기타", share: 10 },
+    ]);
+  });
+
+  it("국가 수가 n 이하면 기타 없이 합이 100", () => {
+    const shares = topImportShares(rows, 5);
+    expect(shares.map((s) => s.name)).not.toContain("기타");
+    expect(shares.reduce((sum, s) => sum + s.share, 0)).toBeCloseTo(100);
+  });
+
+  it("수입액 합이 0이면 빈 배열", () => {
+    expect(topImportShares([row("202608", "중국", 0, 0)], 5)).toEqual([]);
+  });
+});
