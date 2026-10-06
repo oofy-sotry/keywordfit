@@ -38,6 +38,7 @@ describe("formatKrwMillion", () => {
     expect(formatKrwMillion(1_337_360)).toBe("1.34조원");
     expect(formatKrwMillion(268_495)).toBe("2,685억원");
     expect(formatKrwMillion(50)).toBe("5,000만원");
+    expect(formatKrwMillion(0)).toBe("0");
   });
 
   it("null은 대시", () => {
