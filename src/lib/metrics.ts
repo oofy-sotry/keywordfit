@@ -57,3 +57,31 @@ export function topImportShares(rows: TradeRow[], n: number): CountryShare[] {
   const restUsd = sorted.slice(n).reduce((sum, [, usd]) => sum + usd, 0);
   return restUsd > 0 ? [...top, { name: "기타", share: round((restUsd / total) * 100, 1) }] : top;
 }
+
+export type ImportSummary = {
+  series: MonthlyImport[]; // 최근 24개월 (공표된 달 기준)
+  yoy: number | null; // 최근 12개월 합 vs 직전 12개월 합
+  topCountries: CountryShare[]; // 최근 12개월 기준 상위 5 + 기타
+  asOf: Yyyymm; // 최신 공표 월
+};
+
+const SERIES_MONTHS = 24;
+const YEAR = 12;
+
+/** 관세청 행들을 화면용 수입 요약으로 만든다. 공표된 데이터가 하나도 없으면 null. */
+export function summarizeImports(rows: TradeRow[], months: Yyyymm[]): ImportSummary | null {
+  const series = sumImportsByMonth(rows, months).slice(-SERIES_MONTHS);
+  if (series.length === 0) return null;
+
+  const sumUsd = (list: MonthlyImport[]) => list.reduce((sum, m) => sum + m.usd, 0);
+  const recent = series.slice(-YEAR);
+  const yoy = series.length >= YEAR * 2 ? calcYoy(sumUsd(recent), sumUsd(series.slice(-YEAR * 2, -YEAR))) : null;
+
+  const recentMonths = new Set(recent.map((m) => m.month));
+  const topCountries = topImportShares(
+    rows.filter((row) => recentMonths.has(row.month)),
+    5,
+  );
+
+  return { series, yoy, topCountries, asOf: series[series.length - 1].month };
+}
