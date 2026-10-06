@@ -71,12 +71,12 @@
 
 ## D4 — HS코드 데이터 + 분류 (F1)
 
-- [ ] `scripts/build-hs-codes.ts` — XLSX → `data/hs-codes.json`
-- [ ] `hs/hsCodes.ts` `existsHsCode`, `searchHsByName` + 테스트
-- [ ] `ai/client.ts`, `ai/prompt.ts`(`PROMPT_VERSION`)
-- [ ] `ai/validate.ts` `validateClassification` + 테스트 (**먼저**)
-- [ ] `ai/classify.ts`, `/api/classify` — AI 실패 시 품명 검색 대체
-- [ ] `ProductForm`, `ClassificationPicker` → 선택하면 `/api/analyze` 호출
+- [x] `scripts/build-hs-codes.mts` + `hs/build.ts`(테스트) — XLSX → `data/hs-codes.json` (5자리 1단 소호 보완)
+- [x] `hs/hsCodes.ts` `exists`, `describe6`, `search` + 테스트, `hs/hsIndex.ts`(서버 전용)
+- [x] `ai/client.ts`(대체 모델 재시도, 테스트), `ai/prompt.ts`(`PROMPT_VERSION`, 주입 방지, 테스트)
+- [x] `ai/validate.ts` `validateClassification` + 테스트 (**먼저**)
+- [x] `ai/classify.ts`, `ai/quota.ts`, `/api/classify`(+ 테스트) — AI 실패 시 품명 검색 대체(캐시 안 함)
+- [x] `ClassificationPicker`, `AnalyzeExplorer` 상품명 흐름 → 1순위 자동 분석, 후보·상품군 바꾸면 재분석
 
 **완료 기준:** "무선 이어폰" 입력 → 상품군·HS 후보 표시 → 선택 → 시장·수입 화면까지 한 흐름.
 
