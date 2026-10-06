@@ -223,7 +223,6 @@ type AnalyzeResponse =
 - **기준 미달 ≠ 감소** → "축소" 같은 단정 대신 "정체"·"증가세가 약해요" (성장률 +4.4%에 "늘지 않고 있어요"가 붙는 모순을 화면에서 발견해 수정)
 - 화면: 상태 색(good/warning/serious, 정체는 회색)은 왼쪽 막대에만, 의미는 아이콘(✓ ↗ ! ↘) + 글자로. 시장(상품군·3개월)과 수입(품목·12개월)의 기간·범위가 다르다는 주석 표시
 - **D6 조정 (대표 품목 22개, 상품군 18개)**: 시장 성장률을 3개월 → **12개월 대 12개월**로 변경(수입과 같은 기간, 분기 등락에 덜 흔들림 — 통신기기 3개월 +67% vs 12개월 +30%), 수입 기준 10% → **6%**(상위 사분위 6.2%, 10%는 22개 중 3개만 넘어 "기회"가 과반). 시장 5%는 유지(물가상승률보다 확실히 높은 성장). 결과 분포: 기회 9 / 성장 중 5 / 정체 8 / 과열 0
-- (초안) 임계값(+5%, +10%)은 **초안**. D6에 대표 품목 20개로 분포를 보고 조정, 근거를 `docs/ai-log.md`에 기록.
 - 보조 표시: 수입국 1위 점유율(소싱 집중도), kg당 단가 YoY.
 - 엣지 케이스: 직전 기간 값 0 → YoY `null` → 지표 계산 안 함 (`NO_DATA`).
 
@@ -317,9 +316,9 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 | `ai-call` | `ai-call:{시각}:{uuid}` | 2d | 일일 상한 집계용 호출 기록 (캐시 아님) |
 
 - `getOrFetch(key, source, ttl, fetcher)` 하나로 통일, upsert 저장. 만료 행은 조회 시 `expires_at > now()`로 무시.
-  - 구현: `cache.ts` `createCache(store)`(저장소 주입 → 가짜 저장소로 테스트) + `supabase.ts`의 `supabaseCacheStore`·`getOrFetch` (캐시 읽기·쓰기 각 1.5초 제한)
+  - 구현: `cache.ts` `createCache(store)`(저장소 주입 → 가짜 저장소로 테스트), 버전은 **출처별 `CACHE_VERSIONS`** + `supabase.ts`의 `supabaseCacheStore`·`getOrFetch` (캐시 읽기·쓰기 각 1.5초 제한)
   - 캐시 키 (실제): `{CACHE_VERSION}:customs:{hs}:{start}-{end}`, `{CACHE_VERSION}:kosis:{category}:25`
-  - **요약 타입 필드를 바꾸면 `CACHE_VERSION`을 올린다** → 이전 형태 캐시는 만료 전이라도 무시 (v2: `recent12Usd`/`recent12Total` 추가)
+  - **저장 형태를 바꾸면 그 출처의 버전만 올린다** → 이전 형태 캐시는 만료 전이라도 무시. 전역 버전 하나였을 때 시장 데이터 때문에 올리자 AI 캐시까지 지워져 분류 결과가 바뀐 일이 있어 D6에 출처별로 분리
 
 ---
 
@@ -351,7 +350,7 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 - 섹션별 스켈레톤 / 에러 박스 (부분 실패 표시)
 - 모든 차트·카드에 **기준월과 출처**(통계청 KOSIS / 관세청) 표기
 - 모바일 375px: 카드 세로 쌓기, 표 가로 스크롤
-- URL `?q=상품명&category=&hs=` 반영 → 결과 공유 가능. 열 때 상품군·HS가 있으면 **AI 분류 없이** 바로 분석(한도 절약), 상품명만 있으면 분류부터. 값은 서버(`page.tsx`)에서 `readUrlState`로 검증해 초기 상태로 전달
+- URL `?q=상품명&category=&hs=` 반영 → 결과 공유 가능. 직접 지정 조회는 `q`를 남기지 않음(입력칸 상품명과 무관할 수 있어서). 열 때 상품군·HS가 있으면 **AI 분류 없이** 바로 분석(한도 절약), 상품명만 있으면 분류부터. 값은 서버(`page.tsx`)에서 `readUrlState`로 검증해 초기 상태로 전달
 
 ---
 
