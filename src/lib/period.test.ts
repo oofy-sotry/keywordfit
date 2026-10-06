@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, getRecentMonths, listMonths, splitByYear } from "./period";
+import { addMonths, getRecentMonths, listMonths, splitByYear, startOfDayKst } from "./period";
 
 describe("addMonths", () => {
   it("같은 해 안에서 더하고 뺀다", () => {
@@ -56,5 +56,17 @@ describe("splitByYear", () => {
       { start: "202501", end: "202512" },
       { start: "202601", end: "202602" },
     ]);
+  });
+});
+
+describe("startOfDayKst", () => {
+  it("한국 시간 기준 오늘 0시를 UTC로", () => {
+    // KST 2026-10-06 09:30 → KST 2026-10-06 00:00 = UTC 2026-10-05 15:00
+    expect(startOfDayKst(new Date("2026-10-06T00:30:00Z")).toISOString()).toBe("2026-10-05T15:00:00.000Z");
+  });
+
+  it("UTC로는 전날이어도 한국은 다음 날이면 한국 날짜 기준", () => {
+    // UTC 2026-10-06 16:00 = KST 2026-10-07 01:00 → KST 10-07 00:00 = UTC 10-06 15:00
+    expect(startOfDayKst(new Date("2026-10-06T16:00:00Z")).toISOString()).toBe("2026-10-06T15:00:00.000Z");
   });
 });
