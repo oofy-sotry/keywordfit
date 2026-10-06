@@ -26,7 +26,7 @@ export function normalizeProductKey(product: string): string {
 }
 
 /** 코멘트 프롬프트 버전 (분류와 따로 올린다) */
-export const INSIGHT_PROMPT_VERSION = "insight-v3"; // v3: 상위 분류 전달, 최근 월=한 달 명시, ~요체·시사점 중심
+export const INSIGHT_PROMPT_VERSION = "insight-v4"; // v4: 짧은 품목명, 시장은 상품군 이름으로 (v3: 상위 분류·한 달·~요체)
 
 const INSIGHT_SYSTEM = `당신은 이커머스 셀러에게 시장 데이터를 해석해 주는 분석가다.
 제공된 지표만 근거로, 이 품목에 진입하려는 셀러에게 도움이 되는 코멘트 3~4개를 쓴다.
@@ -38,7 +38,18 @@ const INSIGHT_SYSTEM = `당신은 이커머스 셀러에게 시장 데이터를 
 - 품목 이름이 "기타"처럼 모호하면 상위 분류 이름으로 부른다. "기타 품목"이라고 쓰지 않는다.
 - 모든 문장은 "~요"로 끝나는 존댓말로 쓴다. "~니다"로 끝내지 않는다. 한두 문장, 80자 안팎.
 - 제공되지 않은 지표·추측(마진, 광고비, 검색량 등)은 말하지 않는다.
-- 시장 지표는 상품군 전체, 수입 지표는 해당 HS 품목이라는 점을 섞어 단정하지 않는다.`;
+- 시장 지표는 상품군 전체, 수입 지표는 해당 HS 품목이라는 점을 섞어 단정하지 않는다.
+- 시장을 말할 때는 제공된 상품군 이름(예: "애완용품 온라인 시장")으로 부르고, HS 품목·상위 분류 이름으로 부르지 않는다.`;
+
+/** AI에게 주는 품목명: 괄호·대괄호 설명을 빼고 첫 쉼표 앞까지 (긴 공식 명칭을 문장에 옮기지 않게). */
+export function shortHsName(name: string): string {
+  const short = name
+    .replace(/\([^()]*\)/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .split(",")[0]
+    .trim();
+  return short || name;
+}
 
 /** AI에게 주는 지표 설명 — 숫자 없이 (화면 칩용 METRIC_LABELS는 숫자 포함). AI가 설명을 옮겨 써도 숫자 규칙에 걸리지 않게. */
 const PROMPT_METRIC_DESCRIPTIONS: Record<MetricKey, string> = {
@@ -63,6 +74,6 @@ export function buildInsightPrompt(input: {
     .map(([key, value]) => `{{${key}}} = ${value}  (${PROMPT_METRIC_DESCRIPTIONS[key]})`);
   return {
     system: INSIGHT_SYSTEM,
-    user: `상품군(온라인 시장): ${input.categoryName}\nHS 품목(수입): ${input.hsLabel} (상위 분류: ${input.hsHeading})\n\n사용할 수 있는 지표:\n${lines.join("\n")}`,
+    user: `상품군(온라인 시장): ${input.categoryName}\nHS 품목(수입): ${shortHsName(input.hsLabel)} (상위 분류: ${shortHsName(input.hsHeading)})\n\n사용할 수 있는 지표:\n${lines.join("\n")}`,
   };
 }
