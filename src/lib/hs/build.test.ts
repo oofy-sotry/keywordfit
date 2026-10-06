@@ -22,10 +22,13 @@ describe("buildHsData", () => {
       ["8519", "폐지된 호"],
       ["0101", "말"],
     ] as [string, string][],
+    // "HS6단위(5단위포함)" 시트: 5자리(1단 소호)와 6자리(2단 소호)가 섞여 있음
     units6: [
       ["851830", "헤드폰과 이어폰"],
       ["851900", "폐지된 소호"],
+      ["01012", "말"],
       ["010121", "번식용"],
+      ["01099", "폐지된 1단 소호"],
     ] as [string, string][],
     units10: [["8518309000", "기타"]] as [string, string][],
   };
@@ -41,14 +44,16 @@ describe("buildHsData", () => {
     expect(data.codes10["8518304000"]).toBe("유선전화 핸드세트");
   });
 
-  it("4·6단위는 유효한 10자리 코드의 상위만 남긴다", () => {
+  it("4·5·6단위는 유효한 10자리 코드의 상위만 남긴다", () => {
     const data = buildHsData(input, today);
     expect(data.units6).toEqual({ "851830": "헤드폰과 이어폰", "010121": "번식용" });
+    expect(data.units5).toEqual({ "01012": "말" });
     expect(data.units4).toEqual({ "8518": "마이크로폰, 헤드폰과 이어폰", "0101": "말" });
   });
 
   it("코드 앞뒤 공백·숫자형 코드를 정리한다", () => {
     const data = buildHsData({ ...input, codes: [{ code: " 8518309000 ", end: 46387, name: "기타" }] }, today);
     expect(Object.keys(data.codes10)).toEqual(["8518309000"]);
+    expect(data.units5).toEqual({});
   });
 });
