@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { classifyProduct } from "@/lib/ai/classify";
+import { clientKey } from "@/lib/clientKey";
 
 const Body = z.object({
   product: z.string().trim().min(1).max(40),
@@ -10,6 +11,6 @@ export async function POST(request: Request) {
   if (!body.success) {
     return Response.json({ ok: false, error: "INVALID_INPUT" }, { status: 400 });
   }
-  const { data, cached } = await classifyProduct(body.data.product);
+  const { data, cached } = await classifyProduct(body.data.product, clientKey(request.headers));
   return Response.json({ ok: true, product: body.data.product, data, cached });
 }
