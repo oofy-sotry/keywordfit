@@ -39,13 +39,13 @@
 
 ## D2 — 관세청 수입 데이터 (F3)
 
-- [ ] `period.ts` 월 범위·1년 구간 분할 + 테스트 (**먼저**)
-- [ ] `customs/parse.ts` XML 정규화 + 테스트 (1건/여러 건/0건/오류)
-- [ ] `metrics.ts` `unitPrice`, `sumByMonth`, `topShares`, `yoy` + 테스트
-- [ ] `lib/http.ts`, `lib/errors.ts` — 타임아웃·에러 코드 매핑
-- [ ] `customs/trade.ts` — 2구간 호출·합치기
-- [ ] `/api/analyze` — `imports` 섹션만 (hs 파라미터 직접 입력)
-- [ ] `ImportChart`, `CountryShareTable`
+- [x] `period.ts` 월 범위·1년 구간 분할 + 테스트 (**먼저**)
+- [x] `customs/parse.ts` XML 정규화 + 테스트 (실제 응답 기반: 1건/여러 건/0건/기간 오류/키 오류/한도 초과)
+- [x] `metrics.ts` `calcUnitPrice`, `calcYoy`, `sumImportsByMonth`, `topImportShares`, `summarizeImports` + 테스트
+- [x] `lib/http.ts`, `lib/errors.ts` — 타임아웃·에러 코드 매핑 (+ 테스트)
+- [x] `customs/trade.ts` — 1년 단위 병렬 호출·합치기 (26개월 요청 → 24개월)
+- [x] `/api/analyze` — `imports` 섹션만 (hs 파라미터 직접 입력)
+- [x] `ImportChart`, `UnitPriceChart`(이중 축 대신 분리), `CountryShareTable`, `ImportExplorer`
 
 **완료 기준:** HS코드 입력 → 월별 수입액·단가 차트와 수입국 표가 배포 URL에서 보인다.
 
