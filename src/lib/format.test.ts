@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatKrwMillion, krwAxisFormatter, formatMonth, formatShortMonth, formatSignedPercent, formatUsd } from "./format";
+import {
+  fixParticle,
+  formatKrwMillion,
+  formatMonth,
+  formatShortMonth,
+  formatSignedPercent,
+  formatUsd,
+  krwAxisFormatter,
+} from "./format";
 
 describe("formatMonth", () => {
   it("YYYYMM을 YYYY.MM으로", () => {
@@ -59,5 +67,35 @@ describe("krwAxisFormatter", () => {
 
   it("만 단위", () => {
     expect(krwAxisFormatter(50)(50)).toBe("5,000만원");
+  });
+});
+
+describe("fixParticle", () => {
+  it("값의 마지막 글자 받침에 맞춰 조사를 고친다", () => {
+    expect(fixParticle("미국", "가")).toBe("이");
+    expect(fixParticle("중국", "는")).toBe("은");
+    expect(fixParticle("$20.3억", "를")).toBe("을");
+    expect(fixParticle("일본", "와")).toBe("과");
+    expect(fixParticle("베트남", "로")).toBe("으로");
+  });
+
+  it("받침이 없으면 받침 없는 조사로", () => {
+    expect(fixParticle("말레이시아", "이")).toBe("가");
+    expect(fixParticle("태국 아세안", "을")).toBe("을");
+    expect(fixParticle("말레이시아", "으로")).toBe("로");
+  });
+
+  it("ㄹ 받침은 '로'", () => {
+    expect(fixParticle("브라질", "으로")).toBe("로");
+  });
+
+  it("%는 '퍼센트'(받침 없음)로 읽는다", () => {
+    expect(fixParticle("+5.3%", "을")).toBe("를");
+    expect(fixParticle("51.9%", "이")).toBe("가");
+  });
+
+  it("판단할 수 없는 끝 글자(숫자·기호)나 모르는 조사는 그대로", () => {
+    expect(fixParticle("$80.52/kg", "를")).toBe("를");
+    expect(fixParticle("중국", "에서")).toBe("에서");
   });
 });
