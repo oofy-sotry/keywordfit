@@ -59,13 +59,13 @@
 
 ## D3 — KOSIS 시장 데이터 (F2) + Supabase 캐시
 
-- [ ] `kosis/parse.ts` `parseStatValue`, 응답 정규화 + 테스트 (**먼저**)
-- [ ] `kosis/categories.ts` — D1에 확정한 상품군 코드
-- [ ] `kosis/onlineShopping.ts` — 최근 25개월
-- [ ] `/api/analyze`에 `market` 섹션, `Promise.allSettled`로 병렬화
-- [ ] `supabase.ts`, `cache.ts` `getOrFetch` — 캐시 실패 시 우회
-- [ ] KOSIS·관세청 호출을 `getOrFetch`로 감싸기
-- [ ] `MarketChart`, `SummaryCards`, 기준월·출처 표기
+- [x] `kosis/parse.ts` `parseStatValue`, `parseKosisJson` + 테스트 (실제 오류 응답 11/21/30/40, jsonVD 누락)
+- [x] `kosis/categories.ts` — 실제 응답 기준 재화 상품군 19개
+- [x] `kosis/onlineShopping.ts` — 최근 25개월, `metrics.summarizeMarket`(+ 테스트)
+- [x] `/api/analyze`에 `market` 섹션, `Promise.all`로 병렬화 (섹션별 실패 격리)
+- [x] `cache.ts` `createCache`(+ 테스트 6개), `supabase.ts` `getOrFetch` — 캐시 실패 시 우회, 1.5초 제한
+- [x] KOSIS·관세청 요약을 `getOrFetch`로 감싸기 (24h)
+- [x] `MarketChart`, `MarketSection`, `ImportSection` 분리, 상품군 선택, 기준월·출처 표기
 
 **완료 기준:** 같은 조건 두 번째 조회 시 `cached: true`. KOSIS 키를 일부러 틀려도 수입 섹션은 정상.
 
