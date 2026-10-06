@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 /* 색은 역할 토큰으로만 쓴다. 차트 색은 dataviz 기본 팔레트 (단일 계열 = series-1). */
+/* 상태 색은 모드와 무관하게 고정 — 항상 아이콘·글자와 함께 쓴다 (색만으로 의미 전달 금지) */
+:root {
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+}
+
 :root {
   color-scheme: light;
   --background: #f6f6f4;
@@ -52,6 +59,9 @@
   --color-grid: var(--grid);
   --color-series-1: var(--series-1);
   --color-danger: var(--danger);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
   --font-sans: var(--font-geist-sans), "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   --font-mono: var(--font-geist-mono);
 }
