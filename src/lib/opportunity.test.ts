@@ -11,11 +11,11 @@ describe("classifyOpportunity", () => {
 
   it("경계값은 '이상'이면 성장·증가로 본다", () => {
     expect(MARKET_GROWTH_THRESHOLD).toBe(5);
-    expect(IMPORT_GROWTH_THRESHOLD).toBe(10);
-    expect(classifyOpportunity(5, 9.9)?.grade).toBe("opportunity");
-    expect(classifyOpportunity(4.9, 9.9)?.grade).toBe("shrinking");
-    expect(classifyOpportunity(5, 10)?.grade).toBe("growing");
-    expect(classifyOpportunity(4.9, 10)?.grade).toBe("overheated");
+    expect(IMPORT_GROWTH_THRESHOLD).toBe(6); // D6: 대표 품목 22개 수입 증가율 상위 사분위(6.2%)
+    expect(classifyOpportunity(5, 5.9)?.grade).toBe("opportunity");
+    expect(classifyOpportunity(4.9, 5.9)?.grade).toBe("shrinking");
+    expect(classifyOpportunity(5, 6)?.grade).toBe("growing");
+    expect(classifyOpportunity(4.9, 6)?.grade).toBe("overheated");
   });
 
   it("둘 중 하나라도 null이면 판단하지 않는다", () => {
@@ -34,7 +34,7 @@ describe("classifyOpportunity", () => {
   });
 
   it("기준 미달이 곧 감소는 아니므로, 성장률이 양수여도 모순되지 않는 문구를 쓴다", () => {
-    const flat = classifyOpportunity(4.4, 5.9)!;
+    const flat = classifyOpportunity(4.4, 5.5)!;
     expect(flat.label).toBe("정체");
     expect(flat.description).toBe("수요와 수입 모두 증가세가 약해요");
     expect(classifyOpportunity(4.4, 25)!.description).toBe("수요 증가는 약한데 수입(공급)이 빠르게 늘고 있어요");
