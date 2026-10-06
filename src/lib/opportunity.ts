@@ -3,11 +3,11 @@ import type { Section } from "@/lib/section";
 
 /**
  * 진입 판단 지표 (design.md §5). 시장 성장률 × 수입 증가율 4분면.
- * 임계값은 초안 — D6에 대표 품목 20개 분포를 보고 조정하고 근거를 ai-log에 남긴다.
- * 주의: 시장은 최근 3개월 전년 대비(KOSIS 상품군 전체), 수입은 최근 12개월 전년 대비(HS 품목) — 기간·범위가 다르다.
+ * 임계값 근거(D6, 대표 품목 22개): 시장 5%는 물가상승률보다 확실히 높은 성장, 수입 6%는 상위 사분위. ai-log 참고.
+ * 두 지표 모두 최근 12개월 대 직전 12개월. 단 시장은 KOSIS 상품군 전체, 수입은 HS 품목이라 범위가 다르다.
  */
 export const MARKET_GROWTH_THRESHOLD = 5; // %, 이상이면 시장 성장
-export const IMPORT_GROWTH_THRESHOLD = 10; // %, 이상이면 수입 증가
+export const IMPORT_GROWTH_THRESHOLD = 6; // %, 이상이면 수입 증가 — D6: 대표 품목 22개 상위 사분위(6.2%), 10%는 3개만 넘어 "기회"가 과반
 
 export type OpportunityGrade = "opportunity" | "growing" | "overheated" | "shrinking";
 
