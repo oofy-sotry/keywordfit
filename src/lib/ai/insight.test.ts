@@ -48,7 +48,8 @@ describe("getInsight", () => {
       data: { points: [{ text: "시장은 {{marketYoy}}, 수입은 {{importYoy}} 늘었어요." }] },
       model: "lite",
     });
-    const { data } = await getInsight("0021", "851830");
+    const { data } = await getInsight("0021", "851830", "client-1");
+    expect(reserveAiCall).toHaveBeenCalledWith({ client: "client-1" });
     expect(data.points).toEqual([{ text: "시장은 +8.1%, 수입은 +23.0% 늘었어요.", metrics: ["marketYoy", "importYoy"] }]);
     expect(data.opportunity?.grade).toBe("growing");
     expect(data.metrics.topCountry).toBe("중국");

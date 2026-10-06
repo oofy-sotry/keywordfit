@@ -9,6 +9,7 @@ function post(body: unknown) {
   return POST(
     new Request("http://localhost/api/classify", {
       method: "POST",
+      headers: { "x-forwarded-for": "203.0.113.7" },
       body: typeof body === "string" ? body : JSON.stringify(body),
     }),
   );
@@ -32,7 +33,7 @@ describe("POST /api/classify", () => {
 
   it("상품명 앞뒤 공백을 지우고 분류 결과를 그대로 내려준다", async () => {
     const response = await post({ product: "  무선 이어폰 " });
-    expect(classifyProduct).toHaveBeenCalledWith("무선 이어폰");
+    expect(classifyProduct).toHaveBeenCalledWith("무선 이어폰", expect.stringMatching(/^[0-9a-f]{16}$/)); // IP 해시
     expect(await response.json()).toEqual({ ok: true, product: "무선 이어폰", data: result, cached: false });
   });
 });

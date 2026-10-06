@@ -7,7 +7,13 @@ const { getInsight } = await import("@/lib/ai/insight");
 const { POST } = await import("./route");
 
 function post(body: unknown) {
-  return POST(new Request("http://localhost/api/insight", { method: "POST", body: JSON.stringify(body) }));
+  return POST(
+    new Request("http://localhost/api/insight", {
+      method: "POST",
+      headers: { "x-forwarded-for": "203.0.113.7" },
+      body: JSON.stringify(body),
+    }),
+  );
 }
 
 const insight = { points: [], warnings: [], metrics: {}, opportunity: null };
@@ -27,7 +33,7 @@ describe("POST /api/insight", () => {
 
   it("HS 표기를 정규화해서 조회하고 결과를 내려준다", async () => {
     const response = await post({ category: "0021", hs: "8518.30" });
-    expect(getInsight).toHaveBeenCalledWith("0021", "851830");
+    expect(getInsight).toHaveBeenCalledWith("0021", "851830", expect.stringMatching(/^[0-9a-f]{16}$/)); // IP 해시
     expect(await response.json()).toEqual({ ok: true, data: insight, cached: true });
   });
 

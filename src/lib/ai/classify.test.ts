@@ -33,10 +33,10 @@ describe("classifyProduct", () => {
       data: { categoryCode: "0021", hsCandidates: [{ code: "851830", reason: "이어폰" }] },
       model: "lite",
     });
-    const { data } = await classifyProduct("  무선   이어폰 ");
+    const { data } = await classifyProduct("  무선   이어폰 ", "client-1");
     expect(data).toMatchObject({ source: "ai", category: { code: "0021" }, hsCandidates: [{ code: "851830" }] });
     expect(getOrFetch.mock.calls[0][0]).toMatch(/^ai-classify:classify-v\d+:lite:무선 이어폰$/);
-    expect(reserveAiCall).toHaveBeenCalledTimes(1);
+    expect(reserveAiCall).toHaveBeenCalledWith({ client: "client-1" });
   });
 
   it("AI 장애면 품명 검색으로 대체, 캐시하지 않음(cached=false, 상품군 null)", async () => {
