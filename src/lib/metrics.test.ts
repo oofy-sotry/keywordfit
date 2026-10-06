@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { TradeRow } from "@/lib/customs/parse";
+import type { MarketRow } from "@/lib/kosis/parse";
 import { listMonths } from "@/lib/period";
-import { calcUnitPrice, calcYoy, sumImportsByMonth, summarizeImports, topImportShares } from "./metrics";
+import {
+  calcUnitPrice,
+  calcYoy,
+  sumImportsByMonth,
+  summarizeImports,
+  summarizeMarket,
+  topImportShares,
+} from "./metrics";
 
 function row(month: string, countryName: string, importUsd: number, importKg: number): TradeRow {
   return {
@@ -122,5 +130,44 @@ describe("summarizeImports", () => {
 
   it("행이 하나도 없으면 null", () => {
     expect(summarizeImports([], months)).toBeNull();
+  });
+});
+
+describe("summarizeMarket", () => {
+  const market = (month: string, amount: number | null): MarketRow => ({
+    month,
+    categoryCode: "0021",
+    categoryName: "가전·전자",
+    amount,
+  });
+  // 202408~202608 (25개월). 202506~202508 = 100씩, 202606~202608 = 110씩
+  const rows = listMonths("202408", "202608").map((month) =>
+    market(month, month >= "202606" ? 110 : month >= "202506" && month <= "202508" ? 100 : 90),
+  );
+
+  it("최근 24개월 시계열과 최신 값·기준월", () => {
+    const summary = summarizeMarket(rows)!;
+    expect(summary.series).toHaveLength(24);
+    expect(summary.series[0]).toEqual({ month: "202409", amount: 90 });
+    expect(summary.latest).toBe(110);
+    expect(summary.asOf).toBe("202608");
+  });
+
+  it("최근 3개월 합 vs 전년 동기 3개월 합 증감률", () => {
+    expect(summarizeMarket(rows)!.yoy).toBe(10);
+  });
+
+  it("비교 구간에 빈 값이 있으면 증감률 null", () => {
+    const withGap = rows.map((r) => (r.month === "202507" ? market(r.month, null) : r));
+    expect(summarizeMarket(withGap)!.yoy).toBeNull();
+  });
+
+  it("15개월 미만이면 증감률 null", () => {
+    expect(summarizeMarket(rows.slice(-14))!.yoy).toBeNull();
+  });
+
+  it("값이 있는 행이 없으면 null", () => {
+    expect(summarizeMarket([])).toBeNull();
+    expect(summarizeMarket([market("202608", null)])).toBeNull();
   });
 });
