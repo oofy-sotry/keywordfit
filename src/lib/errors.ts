@@ -7,6 +7,16 @@ export type ErrorCode =
   | "UPSTREAM_ERROR"
   | "AI_LIMIT";
 
+/** 사용자에게 보여줄 메시지 (design.md §4). */
+export const ERROR_MESSAGES: Record<ErrorCode, string> = {
+  INVALID_INPUT: "입력을 확인해 주세요",
+  NO_DATA: "이 품목은 최근 데이터가 없어요",
+  UPSTREAM_AUTH: "서비스 설정 오류예요",
+  UPSTREAM_RATE_LIMIT: "잠시 후 다시 시도해 주세요",
+  UPSTREAM_ERROR: "데이터를 불러오지 못했어요",
+  AI_LIMIT: "오늘 AI 한도를 다 썼어요",
+};
+
 /** 외부 API 실패. message는 서버 로그용이고 사용자에게는 code만 내려보낸다. */
 export class UpstreamError extends Error {
   constructor(
