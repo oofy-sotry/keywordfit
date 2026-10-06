@@ -156,7 +156,8 @@ export function AnalyzeExplorer({ initial }: { initial: UrlState }) {
 
   function onManualSubmit() {
     setClassify({ status: "idle" });
-    analyze({ category, hs: normalizeHsInput(hs) });
+    // 직접 지정은 입력칸의 상품명과 무관한 조합일 수 있어 공유 링크에 상품명을 남기지 않는다
+    analyze({ category, hs: normalizeHsInput(hs) }, "");
   }
 
   return (
