@@ -62,6 +62,7 @@ export function topImportShares(rows: TradeRow[], n: number): CountryShare[] {
 export type ImportSummary = {
   series: MonthlyImport[]; // 최근 24개월 (공표된 달 기준)
   yoy: number | null; // 최근 12개월 합 vs 직전 12개월 합
+  recent12Usd: number; // 최근 12개월 수입액 합 (12개월 미만이면 있는 만큼)
   topCountries: CountryShare[]; // 최근 12개월 기준 상위 5 + 기타
   asOf: Yyyymm; // 최신 공표 월
 };
@@ -84,7 +85,7 @@ export function summarizeImports(rows: TradeRow[], months: Yyyymm[]): ImportSumm
     5,
   );
 
-  return { series, yoy, topCountries, asOf: series[series.length - 1].month };
+  return { series, yoy, recent12Usd: sumUsd(recent), topCountries, asOf: series[series.length - 1].month };
 }
 
 export type MonthlyMarket = { month: Yyyymm; amount: number | null };
@@ -93,6 +94,7 @@ export type MarketSummary = {
   series: MonthlyMarket[]; // 최근 24개월, 단위 백만원
   latest: number | null; // 최신 월 거래액
   yoy: number | null; // 최근 3개월 합 vs 전년 동기 3개월 합
+  recent12Total: number | null; // 최근 12개월 합 (빈 달이 있거나 12개월 미만이면 null)
   asOf: Yyyymm;
 };
 
@@ -112,6 +114,9 @@ export function summarizeMarket(rows: MarketRow[]): MarketSummary | null {
   const lastYearSum = lastYear.length === MARKET_YOY_MONTHS ? sumOf(lastYear) : null;
   const yoy = recentSum !== null && lastYearSum !== null ? calcYoy(recentSum, lastYearSum) : null;
 
+  const recent12 = all.slice(-YEAR);
+  const recent12Total = recent12.length === YEAR ? sumOf(recent12) : null;
+
   const last = series[series.length - 1];
-  return { series, latest: last.amount, yoy, asOf: last.month };
+  return { series, latest: last.amount, yoy, recent12Total, asOf: last.month };
 }
