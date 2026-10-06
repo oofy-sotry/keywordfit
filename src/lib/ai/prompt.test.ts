@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildClassifyPrompt, buildInsightPrompt, INSIGHT_PROMPT_VERSION, normalizeProductKey, PROMPT_VERSION } from "./prompt";
+import {
+  buildClassifyPrompt,
+  buildInsightPrompt,
+  INSIGHT_PROMPT_VERSION,
+  normalizeProductKey,
+  PROMPT_VERSION,
+  shortHsName,
+} from "./prompt";
 
 const categories = [
   { code: "0021", name: "가전·전자" },
@@ -93,7 +100,32 @@ describe("buildInsightPrompt", () => {
     expect(system).toContain("시사점");
   });
 
-  it("코멘트용 버전 (v3: 상위 분류·한 달 명시·말투)", () => {
-    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v3");
+  it("긴 품목명은 짧게 줄여 준다 (AI가 긴 공식 명칭을 문장에 그대로 옮긴 사례)", () => {
+    const { user } = buildInsightPrompt({
+      ...input,
+      hsLabel: "헤드폰과 이어폰(마이크로폰이 부착된 것인지에 상관없다), 마이크로폰과 한 개 이상의 확성기로 구성된 세트",
+    });
+    expect(user).toContain("HS 품목(수입): 헤드폰과 이어폰 (");
+    expect(user).not.toContain("상관없다");
+  });
+
+  it("시장은 상품군 이름으로 부르라고 지시한다 (HS 분류명으로 부른 사례)", () => {
+    expect(buildInsightPrompt(input).system).toContain("상품군 이름");
+  });
+
+  it("코멘트용 버전 (v4: 짧은 품목명·시장 이름)", () => {
+    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v4");
+  });
+});
+
+describe("shortHsName", () => {
+  it("괄호·대괄호 설명을 빼고 첫 쉼표 앞까지", () => {
+    expect(shortHsName("헤드폰과 이어폰(마이크로폰이 부착된 것인지에 상관없다), 마이크로폰과 한 개 이상의 확성기")).toBe("헤드폰과 이어폰");
+    expect(shortHsName("확성기[인클로저(enclosure)에 장착된 것인지에 상관없다]")).toBe("확성기");
+    expect(shortHsName("말 > 번식용")).toBe("말 > 번식용");
+  });
+
+  it("줄이고 나서 비면 원래 이름", () => {
+    expect(shortHsName("(기타)")).toBe("(기타)");
   });
 });
