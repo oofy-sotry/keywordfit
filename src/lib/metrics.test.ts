@@ -144,26 +144,23 @@ describe("summarizeMarket", () => {
     categoryName: "가전·전자",
     amount,
   });
-  // 202408~202608 (25개월). 202506~202508 = 100씩, 202606~202608 = 110씩
-  const rows = listMonths("202408", "202608").map((month) =>
-    market(month, month >= "202606" ? 110 : month >= "202506" && month <= "202508" ? 100 : 90),
-  );
+  // 202409~202608 (24개월). 직전 12개월(202409~202508) 100씩, 최근 12개월(202509~202608) 110씩
+  const rows = listMonths("202409", "202608").map((month) => market(month, month >= "202509" ? 110 : 100));
 
   it("최근 24개월 시계열과 최신 값·기준월", () => {
     const summary = summarizeMarket(rows)!;
     expect(summary.series).toHaveLength(24);
-    expect(summary.series[0]).toEqual({ month: "202409", amount: 90 });
+    expect(summary.series[0]).toEqual({ month: "202409", amount: 100 });
     expect(summary.latest).toBe(110);
     expect(summary.asOf).toBe("202608");
   });
 
-  it("최근 3개월 합 vs 전년 동기 3개월 합 증감률", () => {
+  it("최근 12개월 합 vs 직전 12개월 합 증감률 (수입 지표와 같은 기간 — D6에 3개월에서 변경)", () => {
     expect(summarizeMarket(rows)!.yoy).toBe(10);
   });
 
   it("최근 12개월 거래액 합계", () => {
-    // 202509~202605 9개월×90 + 202606~202608 3개월×110
-    expect(summarizeMarket(rows)!.recent12Total).toBe(90 * 9 + 110 * 3);
+    expect(summarizeMarket(rows)!.recent12Total).toBe(110 * 12);
   });
 
   it("최근 12개월에 빈 값이 있거나 12개월 미만이면 합계 null", () => {
@@ -172,13 +169,13 @@ describe("summarizeMarket", () => {
     expect(summarizeMarket(rows.slice(-11))!.recent12Total).toBeNull();
   });
 
-  it("비교 구간에 빈 값이 있으면 증감률 null", () => {
-    const withGap = rows.map((r) => (r.month === "202507" ? market(r.month, null) : r));
+  it("비교 구간(직전 12개월)에 빈 값이 있으면 증감률 null", () => {
+    const withGap = rows.map((r) => (r.month === "202412" ? market(r.month, null) : r));
     expect(summarizeMarket(withGap)!.yoy).toBeNull();
   });
 
-  it("15개월 미만이면 증감률 null", () => {
-    expect(summarizeMarket(rows.slice(-14))!.yoy).toBeNull();
+  it("24개월 미만이면 증감률 null", () => {
+    expect(summarizeMarket(rows.slice(-23))!.yoy).toBeNull();
   });
 
   it("값이 있는 행이 없으면 null", () => {
