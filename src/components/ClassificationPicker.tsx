@@ -63,7 +63,7 @@ export function ClassificationPicker({ product, result, category, hs, disabled, 
               checked={hs === candidate.code}
               disabled={disabled}
               onChange={() => onChange({ category, hs: candidate.code })}
-              className="mt-1 accent-[var(--series-1)]"
+              className="mt-1 accent-series-1"
             />
             <span className="flex min-w-0 flex-col">
               <span>
