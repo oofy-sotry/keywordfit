@@ -22,8 +22,8 @@ export type Opportunity = {
 const GRADES: Record<OpportunityGrade, { label: string; description: string }> = {
   opportunity: { label: "기회", description: "수요는 늘고 수입(공급) 유입은 적어요" },
   growing: { label: "성장 중·경쟁 유입", description: "수요가 늘지만 수입(공급)도 빠르게 늘고 있어요" },
-  overheated: { label: "과열 주의", description: "수요는 그대로인데 수입(공급)이 늘고 있어요" },
-  shrinking: { label: "축소 시장", description: "수요와 수입 모두 늘지 않고 있어요" },
+  overheated: { label: "과열 주의", description: "수요 증가는 약한데 수입(공급)이 빠르게 늘고 있어요" },
+  shrinking: { label: "정체", description: "수요와 수입 모두 증가세가 약해요" }, // 기준 미달 ≠ 감소
 };
 
 export function classifyOpportunity(marketYoy: number | null, importYoy: number | null): Opportunity | null {
