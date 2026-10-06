@@ -32,4 +32,11 @@ describe("classifyOpportunity", () => {
       importYoy: 23,
     });
   });
+
+  it("기준 미달이 곧 감소는 아니므로, 성장률이 양수여도 모순되지 않는 문구를 쓴다", () => {
+    const flat = classifyOpportunity(4.4, 5.9)!;
+    expect(flat.label).toBe("정체");
+    expect(flat.description).toBe("수요와 수입 모두 증가세가 약해요");
+    expect(classifyOpportunity(4.4, 25)!.description).toBe("수요 증가는 약한데 수입(공급)이 빠르게 늘고 있어요");
+  });
 });
