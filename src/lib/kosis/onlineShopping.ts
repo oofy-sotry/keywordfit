@@ -6,8 +6,8 @@ import { parseKosisJson, type MarketRow } from "./parse";
 
 const ENDPOINT = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
 
-/** 24개월 시계열 + 전년 동기 비교에 필요한 최근 공표 개월 수 */
-export const MARKET_MONTHS = 25;
+/** 24개월 시계열 = 최근 12개월 + 직전 12개월 비교에 필요한 최근 공표 개월 수 */
+export const MARKET_MONTHS = 24;
 
 /** KOSIS 온라인쇼핑몰 상품군별 거래액 (DT_1KE10041), 최근 공표 기준 count개월. */
 export async function fetchMarketRows(categoryCode: string, count = MARKET_MONTHS): Promise<MarketRow[]> {
