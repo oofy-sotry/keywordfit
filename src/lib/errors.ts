@@ -31,3 +31,17 @@ export class UpstreamError extends Error {
 export function toErrorCode(error: unknown): ErrorCode {
   return error instanceof UpstreamError ? error.code : "UPSTREAM_ERROR";
 }
+
+/** API 응답 HTTP 상태 (design.md §4). NO_DATA는 정상 응답 안의 "없음"이라 200. */
+const HTTP_STATUS: Record<ErrorCode, number> = {
+  INVALID_INPUT: 400,
+  NO_DATA: 200,
+  UPSTREAM_AUTH: 502,
+  UPSTREAM_RATE_LIMIT: 429,
+  UPSTREAM_ERROR: 502,
+  AI_LIMIT: 429,
+};
+
+export function httpStatusOf(code: ErrorCode): number {
+  return HTTP_STATUS[code];
+}
