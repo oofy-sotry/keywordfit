@@ -27,6 +27,16 @@ export function formatKrwMillion(million: number | null): string {
   return `${integer.format(million * 100)}만원`;
 }
 
+/** 차트 축용: 축 최댓값으로 단위를 하나 정해 모든 눈금을 같은 단위로 표시 (백만원 입력). */
+export function krwAxisFormatter(maxMillion: number): (million: number) => string {
+  const [divisor, unit] = maxMillion >= 1e6 ? [1e6, "조원"] : maxMillion >= 100 ? [100, "억원"] : [0.01, "만원"];
+  return (million) => {
+    if (million === 0) return "0";
+    const value = Number((million / divisor).toFixed(2));
+    return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}${unit}`;
+  };
+}
+
 export function formatSignedPercent(value: number | null): string {
   if (value === null) return "—";
   const sign = value > 0 ? "+" : "";
