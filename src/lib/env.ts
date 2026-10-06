@@ -9,6 +9,7 @@ const EnvSchema = z.object({
   GEMINI_MODEL: required.default("gemini-flash-lite-latest"), // 무료 티어에서 빠르고 안정적 (2026-10-06 실측)
   GEMINI_FALLBACK_MODEL: required.default("gemini-flash-latest"),
   AI_DAILY_LIMIT: z.coerce.number().int().positive().default(100),
+  AI_PER_CLIENT_DAILY_LIMIT: z.coerce.number().int().positive().default(20), // 한 IP(해시)가 하루에 쓸 수 있는 AI 호출
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: required,
 });
