@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { UpstreamError } from "@/lib/errors";
-import { createCache, type CacheStore } from "./cache";
+import { createCache, type CacheSource, type CacheStore } from "./cache";
 
 const NOW = new Date("2026-10-06T00:00:00Z");
 
@@ -18,9 +18,9 @@ function memoryStore(): CacheStore & { rows: Map<string, { payload: unknown; exp
   };
 }
 
-function setup(store: CacheStore, version = "v1") {
+function setup(store: CacheStore, versions: Partial<Record<CacheSource, string>> = { kosis: "v1" }) {
   vi.spyOn(console, "error").mockImplementation(() => {});
-  return createCache(store, { version, now: () => NOW });
+  return createCache(store, { versions, now: () => NOW });
 }
 
 describe("getOrFetch", () => {
@@ -73,9 +73,19 @@ describe("getOrFetch", () => {
 
   it("버전이 다르면 이전 형태의 캐시를 쓰지 않는다 (요약 형태 변경 대비)", async () => {
     const store = memoryStore();
-    await setup(store, "v1").getOrFetch("k", "kosis", 3600, async () => ({ old: true }));
-    const result = await setup(store, "v2").getOrFetch("k", "kosis", 3600, async () => ({ fresh: true }));
+    await setup(store, { kosis: "v1" }).getOrFetch("k", "kosis", 3600, async () => ({ old: true }));
+    const result = await setup(store, { kosis: "v2" }).getOrFetch("k", "kosis", 3600, async () => ({ fresh: true }));
     expect(result).toEqual({ data: { fresh: true }, cached: false });
     expect([...store.rows.keys()].sort()).toEqual(["v1:k", "v2:k"]);
+  });
+
+  it("버전은 출처별 — 시장 데이터 버전을 올려도 AI 결과 캐시는 그대로 (AI 재호출·결과 변동 방지)", async () => {
+    const store = memoryStore();
+    const before = setup(store, { kosis: "v1", "ai-classify": "v1" });
+    await before.getOrFetch("p", "ai-classify", 3600, async () => ({ hs: "420232" }));
+    const after = setup(store, { kosis: "v2", "ai-classify": "v1" });
+    const fetcher = vi.fn();
+    expect(await after.getOrFetch("p", "ai-classify", 3600, fetcher)).toEqual({ data: { hs: "420232" }, cached: true });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });
