@@ -7,7 +7,7 @@ import { isMarketCategory, categoryName, MARKET_CATEGORIES } from "@/lib/kosis/c
 import { getOrFetch } from "@/lib/supabase";
 import { generateJson } from "./client";
 import { buildClassifyPrompt, normalizeProductKey, PROMPT_VERSION } from "./prompt";
-import { assertAiQuota } from "./quota";
+import { reserveAiCall } from "./quota";
 import { validateClassification, type Classification } from "./validate";
 
 const RawSchema = z.object({
@@ -29,7 +29,7 @@ const deps = {
 async function classifyWithAi(product: string): Promise<Cached<ProductClassification>> {
   const key = `ai-classify:${PROMPT_VERSION}:${getEnv().GEMINI_MODEL}:${normalizeProductKey(product)}`;
   return getOrFetch(key, "ai-classify", TTL_SECONDS, async () => {
-    await assertAiQuota();
+    await reserveAiCall();
     const { data } = await generateJson({ ...buildClassifyPrompt(product, MARKET_CATEGORIES), schema: RawSchema });
     const result = validateClassification(data, deps);
     if (result.hsCandidates.length === 0) {
