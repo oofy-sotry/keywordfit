@@ -274,7 +274,8 @@ type AnalyzeResponse =
 ### 6.4 무료 한도 보호
 
 - 결과 캐시: `hash(입력 + model + PROMPT_VERSION)` 키로 7일 (분류·코멘트 각각)
-- 일일 상한 `AI_DAILY_LIMIT` (기본 100) — `api_cache`의 `source in ('ai-classify','ai-insight')` 오늘 생성 건수
+- 일일 상한 `AI_DAILY_LIMIT` (기본 100) — AI 호출 **직전**에 `api_cache`에 `source='ai-call'` 기록을 남기고, 오늘(KST) 기록 수로 집계 (`ai/quota.ts` `reserveAiCall`). 성공 결과가 아니라 **시도**를 세서 실패를 반복하는 입력으로 우회 불가. 집계·기록 실패 시엔 막지 않음
+- 모델당 타임아웃 12초 (대체 모델까지 최악 24초)
 - Gemini 429 → `UPSTREAM_RATE_LIMIT`, `finishReason`이 `SAFETY`/`MAX_TOKENS`/`RECITATION`이거나 빈 응답 → `UPSTREAM_ERROR`
 
 ---
@@ -284,7 +285,7 @@ type AnalyzeResponse =
 ```sql
 create table api_cache (
   cache_key   text primary key,          -- 예: 'customs:8518300000:202509-202608'
-  source      text not null,             -- 'kosis' | 'customs' | 'ai-classify' | 'ai-insight'
+  source      text not null,             -- 'kosis' | 'customs' | 'ai-classify' | 'ai-insight' | 'ai-call'(호출 기록)
   payload     jsonb not null,            -- 정규화된 결과 (원본 아님)
   created_at  timestamptz not null default now(),
   expires_at  timestamptz not null
@@ -300,6 +301,7 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 | `customs` | HS코드 + 기간 | 24h | 월 1회 공표 |
 | `ai-classify` | 해시 | 7d | 무료 한도 절약 |
 | `ai-insight` | 해시 | 7d | 무료 한도 절약 |
+| `ai-call` | `ai-call:{시각}:{uuid}` | 2d | 일일 상한 집계용 호출 기록 (캐시 아님) |
 
 - `getOrFetch(key, source, ttl, fetcher)` 하나로 통일, upsert 저장. 만료 행은 조회 시 `expires_at > now()`로 무시.
   - 구현: `cache.ts` `createCache(store)`(저장소 주입 → 가짜 저장소로 테스트) + `supabase.ts`의 `supabaseCacheStore`·`getOrFetch` (캐시 읽기·쓰기 각 1.5초 제한)
@@ -376,7 +378,8 @@ keywordfit/
    │  ├─ ClassificationPicker.tsx
    │  ├─ SummaryCards.tsx
    │  ├─ MarketChart.tsx
-   │  ├─ AnalyzeExplorer.tsx     # 입력·상태·결과 조립 (D4에서 상품명 분류 흐름으로 교체)
+   │  ├─ AnalyzeExplorer.tsx     # 상품명 입력 → 분류 → 분석, 상태·결과 조립
+   │  ├─ ManualQueryForm.tsx     # 상품군·HS코드 직접 지정
    │  ├─ ui.tsx                  # Card, ErrorBox, SectionBlock, SectionSkeleton
    │  ├─ MarketSection.tsx / ImportSection.tsx
    │  ├─ chartTheme.tsx          # 차트 공통 축·격자·툴팁·프레임
@@ -413,7 +416,7 @@ keywordfit/
          ├─ client.ts            # Gemini 호출 (교체 시 이 파일만)
          ├─ prompt.ts            # 프롬프트 빌더, PROMPT_VERSION
          ├─ classify.ts         # AI → 검증 → 7일 캐시, 실패 시 품명 검색
-         ├─ quota.ts            # AI 일일 상한 (KST 기준)
+         ├─ quota.ts            # reserveAiCall: 호출 시도 기록 기반 일일 상한 (KST)
          ├─ insight.ts
          └─ validate.ts          # validateClassification, validateInsight (순수)
 ```
