@@ -3,11 +3,13 @@ import { getInsight } from "@/lib/ai/insight";
 import { clientKey } from "@/lib/clientKey";
 import { httpStatusOf, toErrorCode } from "@/lib/errors";
 import { HS_CODE_PATTERN, normalizeHsInput } from "@/lib/hs/code";
+import { hsIndex } from "@/lib/hs/hsIndex";
 import { isMarketCategory } from "@/lib/kosis/categories";
 
 const Body = z.object({
   category: z.string().refine(isMarketCategory),
-  hs: z.string().transform(normalizeHsInput).pipe(z.string().regex(HS_CODE_PATTERN)),
+  // 형식 + 코드표 존재 확인 (관세청은 특수용도 코드 999999 등에도 데이터를 줌)
+  hs: z.string().transform(normalizeHsInput).pipe(z.string().regex(HS_CODE_PATTERN).refine(hsIndex.exists)),
 });
 
 export async function POST(request: Request) {
