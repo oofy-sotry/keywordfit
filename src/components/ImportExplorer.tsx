@@ -179,12 +179,12 @@ function Skeleton() {
     <div className="flex animate-pulse flex-col gap-4" aria-busy="true" aria-label="불러오는 중">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-20 rounded-xl bg-[var(--grid)]" />
+          <div key={i} className="h-20 rounded-xl bg-grid" />
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-72 rounded-xl bg-[var(--grid)]" />
-        <div className="h-72 rounded-xl bg-[var(--grid)]" />
+        <div className="h-72 rounded-xl bg-grid" />
+        <div className="h-72 rounded-xl bg-grid" />
       </div>
     </div>
   );
