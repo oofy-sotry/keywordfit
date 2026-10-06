@@ -5,7 +5,8 @@ import { UpstreamError, type ErrorCode } from "@/lib/errors";
 
 /** Gemini SDK 호출은 이 파일에만 둔다 (다른 AI로 바꿀 때 이 파일만 수정). */
 
-const TIMEOUT_MS = 20_000;
+// 모델당 제한. lite 실측 1.4~2.8초, 대체 모델까지 가도 최악 24초 (2026-10-06)
+const TIMEOUT_MS = 12_000;
 
 export type GenerateRequest = { model: string; system: string; user: string; jsonSchema: unknown };
 export type GenerateFn = (request: GenerateRequest) => Promise<{ text: string | undefined; finishReason?: string }>;
