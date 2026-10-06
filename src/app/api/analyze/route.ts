@@ -4,6 +4,7 @@ import { getImportSummary } from "@/lib/customs/imports";
 import { HS_CODE_PATTERN, normalizeHsInput } from "@/lib/hs/code";
 import { isMarketCategory } from "@/lib/kosis/categories";
 import { getMarketSummary } from "@/lib/kosis/market";
+import { toOpportunitySection } from "@/lib/opportunity";
 import { toSection } from "@/lib/section";
 
 const Query = z
@@ -30,5 +31,7 @@ export async function GET(request: NextRequest) {
     hs ? toSection("imports", () => getImportSummary(hs)) : null,
   ]);
 
-  return Response.json({ ok: true, hs: hs ?? null, category: category ?? null, market, imports });
+  const opportunity = toOpportunitySection(market, imports);
+
+  return Response.json({ ok: true, hs: hs ?? null, category: category ?? null, market, imports, opportunity });
 }
