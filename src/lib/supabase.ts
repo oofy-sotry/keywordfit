@@ -40,12 +40,30 @@ export const supabaseCacheStore: CacheStore = {
 /** 외부 API 결과는 이 함수를 거친다 (CLAUDE.md 규칙). */
 export const { getOrFetch } = createCache(supabaseCacheStore);
 
-/** 오늘(한국 시간) 새로 만든 AI 결과 수 = 실제 AI 호출 수 (캐시 적중은 행을 만들지 않음). */
+/** AI 호출 기록 행 — 일일 상한 집계용. 성공·실패와 무관하게 호출 직전에 남긴다. */
+const AI_CALL_SOURCE = "ai-call";
+const AI_CALL_TTL_MS = 2 * 24 * 60 * 60 * 1000;
+
+export async function recordAiCall(now: Date): Promise<void> {
+  const { error } = await getClient()
+    .from("api_cache")
+    .insert({
+      cache_key: `${AI_CALL_SOURCE}:${now.toISOString()}:${crypto.randomUUID()}`,
+      source: AI_CALL_SOURCE,
+      payload: {},
+      created_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + AI_CALL_TTL_MS).toISOString(),
+    })
+    .abortSignal(AbortSignal.timeout(CACHE_TIMEOUT_MS));
+  if (error) throw error;
+}
+
+/** since 이후 AI 호출 시도 수 (실패한 호출 포함). */
 export async function countAiCallsToday(since: Date): Promise<number> {
   const { count, error } = await getClient()
     .from("api_cache")
     .select("cache_key", { count: "exact", head: true })
-    .in("source", ["ai-classify", "ai-insight"])
+    .eq("source", AI_CALL_SOURCE)
     .gte("created_at", since.toISOString())
     .abortSignal(AbortSignal.timeout(CACHE_TIMEOUT_MS));
   if (error) throw error;
