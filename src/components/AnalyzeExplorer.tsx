@@ -141,8 +141,12 @@ export function AnalyzeExplorer({ initial }: { initial: UrlState }) {
     requestClassification(trimmed, ++latestRequest.current);
   }
 
-  // 공유 링크로 열었을 때: 로딩 상태는 초기값으로 이미 잡혀 있고, 여기선 요청만 시작한다
+  // 공유 링크로 열었을 때: 로딩 상태는 초기값으로 이미 잡혀 있고, 여기선 요청만 시작한다.
+  // 개발 모드(StrictMode)는 effect를 두 번 실행하므로 한 번만 보내도록 기록 (AI 분류 중복 호출 방지)
+  const initialRequestSent = useRef(false);
   useEffect(() => {
+    if (initialRequestSent.current) return;
+    initialRequestSent.current = true;
     if (startsWithAnalysis) requestAnalysis(initialQuery, initial.product, ++latestRequest.current);
     else if (startsWithClassify) requestClassification(initial.product, ++latestRequest.current);
     // 처음 한 번만 실행
