@@ -135,6 +135,10 @@ describe("summarizeImports", () => {
   it("행이 하나도 없으면 null", () => {
     expect(summarizeImports([], months)).toBeNull();
   });
+
+  it("수입액이 전부 0이면 null — 특수용도 코드(9999999290: $0, 73kg)처럼 의미 없는 데이터", () => {
+    expect(summarizeImports([row("202603", "헝가리", 0, 73)], listMonths("202601", "202603"))).toBeNull();
+  });
 });
 
 describe("summarizeMarket", () => {
