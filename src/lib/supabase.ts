@@ -44,13 +44,13 @@ export const { getOrFetch } = createCache(supabaseCacheStore);
 const AI_CALL_SOURCE = "ai-call";
 const AI_CALL_TTL_MS = 2 * 24 * 60 * 60 * 1000;
 
-export async function recordAiCall(now: Date): Promise<void> {
+export async function recordAiCall(now: Date, client = "unknown"): Promise<void> {
   const { error } = await getClient()
     .from("api_cache")
     .insert({
       cache_key: `${AI_CALL_SOURCE}:${now.toISOString()}:${crypto.randomUUID()}`,
       source: AI_CALL_SOURCE,
-      payload: {},
+      payload: { client }, // IP 해시 (clientKey) — 원문 아님
       created_at: now.toISOString(),
       expires_at: new Date(now.getTime() + AI_CALL_TTL_MS).toISOString(),
     })
@@ -58,14 +58,15 @@ export async function recordAiCall(now: Date): Promise<void> {
   if (error) throw error;
 }
 
-/** since 이후 AI 호출 시도 수 (실패한 호출 포함). */
-export async function countAiCallsToday(since: Date): Promise<number> {
-  const { count, error } = await getClient()
+/** since 이후 AI 호출 시도 수 (실패한 호출 포함). client를 주면 그 호출자 것만. */
+export async function countAiCallsToday(since: Date, client?: string): Promise<number> {
+  let query = getClient()
     .from("api_cache")
     .select("cache_key", { count: "exact", head: true })
     .eq("source", AI_CALL_SOURCE)
-    .gte("created_at", since.toISOString())
-    .abortSignal(AbortSignal.timeout(CACHE_TIMEOUT_MS));
+    .gte("created_at", since.toISOString());
+  if (client) query = query.eq("payload->>client", client);
+  const { count, error } = await query.abortSignal(AbortSignal.timeout(CACHE_TIMEOUT_MS));
   if (error) throw error;
   return count ?? 0;
 }
