@@ -190,10 +190,12 @@ type AnalyzeResponse =
 { category: string; hs: string }
 
 // 응답
-{ ok: true, data: { points: { text: string; metrics: MetricKey[] }[]; warnings: string[] }, cached: boolean }
+{ ok: true, data: { points: { text: string; metrics: MetricKey[] }[]; warnings: string[]; metrics: Record<MetricKey, string | null>; opportunity: Opportunity | null }, cached: boolean }
+// 실패: { ok: false, error } + HTTP 상태 (httpStatusOf: AI_LIMIT·RATE_LIMIT 429, INVALID_INPUT 400, NO_DATA 200, 그 외 502)
 ```
 
 - 서버는 클라이언트가 보낸 수치를 믿지 않는다. `category`·`hs`로 캐시(없으면 API)에서 데이터를 다시 가져와 AI에 넘긴다.
+- 버튼을 눌렀을 때만 호출(무료 한도 절약). 캐시 키 = `ai-insight:{INSIGHT_PROMPT_VERSION}:{model}:{category}:{hs}:{시장 기준월}:{수입 기준월}` → 새 달 데이터가 나오면 코멘트도 새로 생성
 
 ### 에러 코드
 
@@ -215,8 +217,10 @@ type AnalyzeResponse =
 | | 수입 증가 (importYoY ≥ +10%) | 수입 정체·감소 (< +10%) |
 |---|---|---|
 | **시장 성장** (marketYoY ≥ +5%) | 🟡 성장 중·경쟁 유입 | 🟢 기회 (수요↑, 공급 유입 적음) |
-| **시장 정체·감소** (< +5%) | 🔴 과열 주의 (수요 그대로, 공급↑) | ⚪ 축소 시장 |
+| **시장 성장 약함** (< +5%) | 🔴 과열 주의 (수요 증가 약함, 공급↑) | ⚪ 정체 |
 
+- **기준 미달 ≠ 감소** → "축소" 같은 단정 대신 "정체"·"증가세가 약해요" (성장률 +4.4%에 "늘지 않고 있어요"가 붙는 모순을 화면에서 발견해 수정)
+- 화면: 상태 색(good/warning/serious, 정체는 회색)은 왼쪽 막대에만, 의미는 아이콘(✓ ↗ ! ↘) + 글자로. 시장(상품군·3개월)과 수입(품목·12개월)의 기간·범위가 다르다는 주석 표시
 - 임계값(+5%, +10%)은 **초안**. D6에 대표 품목 20개로 분포를 보고 조정, 근거를 `docs/ai-log.md`에 기록.
 - 보조 표시: 수입국 1위 점유율(소싱 집중도), kg당 단가 YoY.
 - 엣지 케이스: 직전 기간 값 0 → YoY `null` → 지표 계산 안 함 (`NO_DATA`).
@@ -261,14 +265,17 @@ type AnalyzeResponse =
 
 - 입력: 상품군 이름, HS 품명, **지표 키-값 표** (`marketYoY`, `importYoY`, `topCountry`, `topCountryShare`, `unitPriceYoY`, `opportunity` …)
 - 규칙: **문장에 숫자를 직접 쓰지 말고 `{{marketYoY}}` 같은 자리표시자만 쓴다.** 3~4개 포인트.
-- 출력 스키마: `{ points: { text: string; metrics: string[] }[] }`
+- 출력 스키마: `{ points: { text: string; metrics: string[] }[] }` — 근거 지표는 AI가 적은 `metrics`가 아니라 **문장에 실제로 쓴 자리표시자**로 판정
+- 지표 키(실제): `marketYoy`, `marketLatest`, `importYoy`, `importRecent12`, `topCountry`, `topCountryShare`, `unitPrice`, `opportunity` (`ai/insightMetrics.ts`, 값은 우리 데이터를 표시 형식으로)
 - 서버 검증 `validateInsight()` (순수 함수 → 테스트)
   | 검증 | 처리 |
   |------|------|
-  | 알 수 없는 자리표시자 / `metrics`에 없는 키 | 해당 포인트 제거 + 경고 |
+  | 자리표시자가 하나도 없음 | 해당 포인트 제거 + 경고 |
+  | 알 수 없는 자리표시자 | 해당 포인트 제거 + 경고 |
   | 자리표시자 밖에 숫자(`\d`)가 있음 | 해당 포인트 제거 + 경고 (AI가 수치를 지어낸 것) |
   | 값이 `null`인 지표 참조 | 해당 포인트 제거 |
-  | 포인트 0개 | `UPSTREAM_ERROR` |
+  | 중복 문장 / 4개 초과 | 하나만 / 4개까지 |
+  | 포인트 0개 | `UPSTREAM_ERROR` (캐시하지 않음) |
 - 화면에는 서버가 자리표시자를 **우리 데이터 값**으로 치환한 문장과, 참조 지표 칩을 함께 보여준다.
 
 ### 6.4 무료 한도 보호
@@ -373,7 +380,7 @@ keywordfit/
    │  ├─ page.tsx
    │  ├─ api/classify/route.ts
    │  ├─ api/analyze/route.ts
-   │  └─ api/insight/route.ts
+   │  └─ api/insight/route.ts   # POST, 버튼 클릭 시
    ├─ components/
    │  ├─ ClassificationPicker.tsx
    │  ├─ SummaryCards.tsx
@@ -386,8 +393,8 @@ keywordfit/
    │  ├─ ImportChart.tsx
    │  ├─ UnitPriceChart.tsx
    │  ├─ CountryShareTable.tsx
-   │  ├─ OpportunityBadge.tsx
-   │  └─ InsightPanel.tsx
+   │  ├─ OpportunityBadge.tsx    # 진입 판단 (상태 색 + 아이콘 + 글자)
+   │  └─ InsightPanel.tsx        # AI 코멘트 + 근거 칩 (버튼으로 호출)
    └─ lib/
       ├─ env.ts                  # zod 환경변수 검증
       ├─ errors.ts               # ErrorCode, UpstreamError
@@ -398,7 +405,7 @@ keywordfit/
       ├─ format.ts               # 월·달러·원·증감률 표시
       ├─ period.ts               # 월 범위 계산 (순수)
       ├─ metrics.ts              # yoy, unitPrice, shares (순수)
-      ├─ opportunity.ts          # classifyOpportunity (순수)
+      ├─ opportunity.ts          # classifyOpportunity, toOpportunitySection (순수)
       ├─ kosis/
       │  ├─ categories.ts        # 상품군 코드 목록
       │  ├─ parse.ts             # parseStatValue, 응답 정규화 (순수)
@@ -417,7 +424,8 @@ keywordfit/
          ├─ prompt.ts            # 프롬프트 빌더, PROMPT_VERSION
          ├─ classify.ts         # AI → 검증 → 7일 캐시, 실패 시 품명 검색
          ├─ quota.ts            # reserveAiCall: 호출 시도 기록 기반 일일 상한 (KST)
-         ├─ insight.ts
+         ├─ insight.ts          # 서버 재조회 → AI 코멘트 → 검증 → 7일 캐시
+         ├─ insightMetrics.ts   # 코멘트용 지표 키·값·이름
          └─ validate.ts          # validateClassification, validateInsight (순수)
 ```
 
