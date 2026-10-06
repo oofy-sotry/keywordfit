@@ -49,6 +49,7 @@
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
   --color-border: var(--border);
+  --color-grid: var(--grid);
   --color-series-1: var(--series-1);
   --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans), "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
