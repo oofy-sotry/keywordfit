@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:hs": "node scripts/build-hs-codes.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
