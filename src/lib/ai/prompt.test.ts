@@ -67,7 +67,18 @@ describe("buildInsightPrompt", () => {
     expect(system).toContain("{{");
   });
 
-  it("코멘트용 버전이 따로 있다", () => {
-    expect(INSIGHT_PROMPT_VERSION).toMatch(/^insight-v\d+$/);
+  it("지표 설명에는 숫자가 없다 (AI가 '최근 3개월' 같은 표현을 옮기면 숫자 규칙에 걸려 문장이 버려짐)", () => {
+    const { user } = buildInsightPrompt(input);
+    const descriptions = [...user.matchAll(/\((.+)\)$/gm)].map((m) => m[1]);
+    expect(descriptions.length).toBeGreaterThan(0);
+    for (const description of descriptions) expect(description).not.toMatch(/\d/);
+  });
+
+  it("응답에 metrics 필드를 요구하지 않는다 (빠뜨리면 스키마 불일치로 전체 실패하던 문제)", () => {
+    expect(buildInsightPrompt(input).system).not.toContain("metrics");
+  });
+
+  it("코멘트용 버전이 따로 있다 (v2: 문장 틀 캐시·metrics 제거)", () => {
+    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v2");
   });
 });
