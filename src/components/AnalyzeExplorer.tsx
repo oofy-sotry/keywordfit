@@ -63,7 +63,17 @@ export function AnalyzeExplorer({ initial }: { initial: UrlState }) {
     try {
       const response = await fetch(`/api/analyze?${params}`);
       const body: AnalyzeResponse = await response.json();
-      next = body.ok ? { status: "done", result: body } : { status: "error", error: body.error };
+      next = body.ok
+        ? { status: "done", result: body }
+        : {
+            status: "error",
+            error: body.error,
+            // 형식 검사는 화면에서 통과했으니, 서버의 INVALID_INPUT은 코드표에 없는 HS코드
+            message:
+              body.error === "INVALID_INPUT" && query.hs
+                ? "코드표에 없는 HS코드예요. 6자리 소호나 10자리 HSK 코드를 입력해 주세요"
+                : undefined,
+          };
     } catch {
       next = { status: "error", error: "UPSTREAM_ERROR" };
     }
