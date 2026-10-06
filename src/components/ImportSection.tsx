@@ -7,7 +7,6 @@ import type { ImportSummary } from "@/lib/metrics";
 
 /** F3 수입 동향 (관세청) */
 export function ImportSection({ hs, summary }: { hs: string; summary: ImportSummary }) {
-  const recentUsd = summary.series.slice(-12).reduce((sum, m) => sum + m.usd, 0);
   const latest = summary.series[summary.series.length - 1];
   const top = summary.topCountries[0];
 
@@ -17,7 +16,7 @@ export function ImportSection({ hs, summary }: { hs: string; summary: ImportSumm
       source={`출처: 관세청 품목별 국가별 수출입실적 (공공데이터포털) · 기준 ${formatMonth(summary.asOf)} · 수입 금액은 과세가격 기준`}
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Card label="최근 12개월 수입액" value={formatUsd(recentUsd)} />
+        <Card label="최근 12개월 수입액" value={formatUsd(summary.recent12Usd)} />
         <Card label="수입 증가율 (전년 대비)" value={formatSignedPercent(summary.yoy)} />
         <Card
           label={`kg당 단가 (${formatMonth(latest.month)})`}
