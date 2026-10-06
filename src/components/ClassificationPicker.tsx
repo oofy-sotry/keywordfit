@@ -44,7 +44,8 @@ export function ClassificationPicker({ product, result, category, hs, disabled, 
         </select>
       </label>
 
-      <fieldset className="flex flex-col gap-2">
+      {/* fieldset은 기본이 min-inline-size: min-content라, 한 줄로 자르는 긴 품명이 상자 폭을 밀어낸다 → min-w-0 */}
+      <fieldset className="flex min-w-0 flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">HS코드 후보 (수입 동향)</legend>
         {result.hsCandidates.length === 0 && (
           <p className="text-sm text-muted">후보를 찾지 못했어요. 아래 “직접 지정”에서 HS코드를 입력해 주세요.</p>
@@ -66,7 +67,7 @@ export function ClassificationPicker({ product, result, category, hs, disabled, 
               className="mt-1 accent-series-1"
             />
             <span className="flex min-w-0 flex-col">
-              <span>
+              <span className="line-clamp-2 break-words" title={candidate.label}>
                 <span className="font-mono tabular-nums">{candidate.code}</span> · {candidate.label}
               </span>
               <span className="truncate text-xs text-muted" title={candidate.heading}>
