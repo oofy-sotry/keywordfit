@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Hs6 } from "@/lib/hs/hsCodes";
 import type { InsightMetrics } from "./insightMetrics";
-import { validateClassification, validateInsight } from "./validate";
+import { fillInsight, validateClassification, validateInsight } from "./validate";
 
 const table: Record<string, Hs6> = {
   "851830": { code: "851830", label: "헤드폰과 이어폰", heading: "마이크로폰, 확성기, 헤드폰" },
@@ -80,19 +80,19 @@ describe("validateInsight", () => {
     unitPrice: "$80.52/kg",
     opportunity: null,
   };
-  const point = (text: string) => ({ text, metrics: [] });
+  const point = (text: string) => ({ text });
 
-  it("자리표시자를 우리 데이터 값으로 채우고, 쓰인 지표 키를 근거로 남긴다", () => {
+  it("자리표시자를 남긴 문장 틀과 쓰인 지표 키를 돌려준다 (값은 캐시하지 않음)", () => {
     const result = validateInsight({ points: [point("시장은 {{marketYoy}} 성장, 수입은 {{importYoy}} 늘었어요.")] }, metrics);
-    expect(result.points).toEqual([
-      { text: "시장은 +5.3% 성장, 수입은 +11.8% 늘었어요.", metrics: ["marketYoy", "importYoy"] },
+    expect(result.templates).toEqual([
+      { text: "시장은 {{marketYoy}} 성장, 수입은 {{importYoy}} 늘었어요.", metrics: ["marketYoy", "importYoy"] },
     ]);
     expect(result.warnings).toEqual([]);
   });
 
   it("자리표시자 밖에 숫자가 있으면(AI가 수치를 지어냄) 그 포인트를 뺀다", () => {
     const result = validateInsight({ points: [point("시장은 {{marketYoy}}, 수입은 약 20% 늘었어요.")] }, metrics);
-    expect(result.points).toEqual([]);
+    expect(result.templates).toEqual([]);
     expect(result.warnings[0]).toContain("숫자");
   });
 
@@ -101,19 +101,39 @@ describe("validateInsight", () => {
       { points: [point("{{profitMargin}}이 높아요."), point("등급은 {{opportunity}}예요."), point("{{topCountry}} 비중이 커요.")] },
       metrics,
     );
-    expect(result.points.map((p) => p.text)).toEqual(["중국 비중이 커요."]);
+    expect(result.templates.map((t) => t.text)).toEqual(["{{topCountry}} 비중이 커요."]);
     expect(result.warnings).toHaveLength(2);
   });
 
   it("근거 지표가 하나도 없는 문장은 뺀다", () => {
-    expect(validateInsight({ points: [point("좋은 시장이에요.")] }, metrics).points).toEqual([]);
+    expect(validateInsight({ points: [point("좋은 시장이에요.")] }, metrics).templates).toEqual([]);
   });
 
   it("최대 4개, 같은 문장 중복 제거", () => {
     const same = point("{{topCountry}} 비중이 커요.");
     const many = [same, same, ...["marketYoy", "importYoy", "unitPrice", "importRecent12"].map((k) => point(`{{${k}}} 참고`))];
     const result = validateInsight({ points: many }, metrics);
-    expect(result.points).toHaveLength(4);
-    expect(result.points.filter((p) => p.text === "중국 비중이 커요.")).toHaveLength(1);
+    expect(result.templates).toHaveLength(4);
+    expect(result.templates.filter((t) => t.text === "{{topCountry}} 비중이 커요.")).toHaveLength(1);
+  });
+});
+
+describe("fillInsight", () => {
+  const templates = [
+    { text: "시장은 {{marketYoy}} 성장했어요.", metrics: ["marketYoy" as const] },
+    { text: "단가는 {{unitPrice}}예요.", metrics: ["unitPrice" as const] },
+  ];
+
+  it("요청 시점의 우리 데이터로 채운다 (캐시 후 수치가 바뀌어도 문장과 근거 칩이 일치)", () => {
+    const fresh = { marketYoy: "+6.0%", unitPrice: "$81.00/kg" } as InsightMetrics;
+    expect(fillInsight(templates, fresh)).toEqual([
+      { text: "시장은 +6.0% 성장했어요.", metrics: ["marketYoy"] },
+      { text: "단가는 $81.00/kg예요.", metrics: ["unitPrice"] },
+    ]);
+  });
+
+  it("그사이 값이 없어진 지표를 쓰는 문장은 뺀다", () => {
+    const partial = { marketYoy: "+6.0%", unitPrice: null } as InsightMetrics;
+    expect(fillInsight(templates, partial).map((p) => p.text)).toEqual(["시장은 +6.0% 성장했어요."]);
   });
 });
