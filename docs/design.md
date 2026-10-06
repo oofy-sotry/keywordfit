@@ -166,6 +166,7 @@
 ### `GET /api/analyze?category={code}&hs={code}`
 
 - `category`(KOSIS 상품군 코드)와 `hs`(6·10자리, `8518.30` 같은 표기 허용) 중 **하나 이상** 필요, 둘 다 없거나 형식 오류면 400 `INVALID_INPUT`
+- `hs`는 **코드표에 있는 코드만** (관세청은 특수용도 코드 `999999`에도 데이터를 줌 — D6 엣지 케이스에서 발견). 수입액이 전부 0이면 `NO_DATA`
 - 요청하지 않은 섹션은 `null`. 두 섹션은 `Promise.all`로 병렬 조회, 각자 `toSection`으로 실패 격리
 
 ```ts
@@ -214,14 +215,15 @@ type AnalyzeResponse =
 
 두 성장률의 조합으로 4분면 분류. `classifyOpportunity(marketYoY, importYoY)` 순수 함수 → 단위 테스트 1순위.
 
-| | 수입 증가 (importYoY ≥ +10%) | 수입 정체·감소 (< +10%) |
+| | 수입 증가 (importYoY ≥ +6%) | 수입 증가 약함 (< +6%) |
 |---|---|---|
 | **시장 성장** (marketYoY ≥ +5%) | 🟡 성장 중·경쟁 유입 | 🟢 기회 (수요↑, 공급 유입 적음) |
 | **시장 성장 약함** (< +5%) | 🔴 과열 주의 (수요 증가 약함, 공급↑) | ⚪ 정체 |
 
 - **기준 미달 ≠ 감소** → "축소" 같은 단정 대신 "정체"·"증가세가 약해요" (성장률 +4.4%에 "늘지 않고 있어요"가 붙는 모순을 화면에서 발견해 수정)
 - 화면: 상태 색(good/warning/serious, 정체는 회색)은 왼쪽 막대에만, 의미는 아이콘(✓ ↗ ! ↘) + 글자로. 시장(상품군·3개월)과 수입(품목·12개월)의 기간·범위가 다르다는 주석 표시
-- 임계값(+5%, +10%)은 **초안**. D6에 대표 품목 20개로 분포를 보고 조정, 근거를 `docs/ai-log.md`에 기록.
+- **D6 조정 (대표 품목 22개, 상품군 18개)**: 시장 성장률을 3개월 → **12개월 대 12개월**로 변경(수입과 같은 기간, 분기 등락에 덜 흔들림 — 통신기기 3개월 +67% vs 12개월 +30%), 수입 기준 10% → **6%**(상위 사분위 6.2%, 10%는 22개 중 3개만 넘어 "기회"가 과반). 시장 5%는 유지(물가상승률보다 확실히 높은 성장). 결과 분포: 기회 9 / 성장 중 5 / 정체 8 / 과열 0
+- (초안) 임계값(+5%, +10%)은 **초안**. D6에 대표 품목 20개로 분포를 보고 조정, 근거를 `docs/ai-log.md`에 기록.
 - 보조 표시: 수입국 1위 점유율(소싱 집중도), kg당 단가 YoY.
 - 엣지 케이스: 직전 기간 값 0 → YoY `null` → 지표 계산 안 함 (`NO_DATA`).
 
@@ -266,7 +268,8 @@ type AnalyzeResponse =
 - 입력: 상품군 이름, HS 품명, **지표 키-값 표** (`marketYoY`, `importYoY`, `topCountry`, `topCountryShare`, `unitPriceYoY`, `opportunity` …)
 - 규칙: **문장에 숫자를 직접 쓰지 말고 `{{marketYoY}}` 같은 자리표시자만 쓴다.** 3~4개 포인트.
 - 출력 스키마: `{ points: { text: string }[] }` — 근거 지표는 **문장에 실제로 쓴 자리표시자**로 판정 (v1의 `metrics` 필드는 빠뜨리면 전체 실패라 v2에서 제거)
-- **캐시에는 자리표시자가 남은 문장 틀만 저장, 값은 매 요청 `fillInsight`로 지금 데이터에서 채움** → 같은 기준월에 KOSIS가 수치를 고쳐도 문장 속 수치와 근거 칩이 항상 일치
+- **캐시에는 자리표시자가 남은 문장 틀만 저장, 값은 매 요청 `fillInsight`로 지금 데이터에서 채움** — 채운 값 뒤 조사는 받침에 맞게 교정(`fixParticle`: "미국가" → "미국이")
+- 프롬프트 v6 규칙(D6 측정으로 추가): 상위 분류 이름 전달, 최근 월=한 달 명시, "~요"체, 시사점 중심, 시장은 상품군 이름으로, 수입 품목은 "이 품목"(공식 명칭 금지), 순위는 말로. 검증에 "자리표시자를 순위 숫자로 오용(`{{topCountry}}위`)" 제외 추가 → 같은 기준월에 KOSIS가 수치를 고쳐도 문장 속 수치와 근거 칩이 항상 일치
 - AI에게 주는 지표 설명은 숫자 없이("최근 석 달", "최근 한 해") — 설명을 옮겨 써도 숫자 규칙에 걸리지 않게. 화면 칩 이름은 숫자 포함
 - 지표 키(실제): `marketYoy`, `marketLatest`, `importYoy`, `importRecent12`, `topCountry`, `topCountryShare`, `unitPrice`, `opportunity` (`ai/insightMetrics.ts`, 값은 우리 데이터를 표시 형식으로)
 - 서버 검증 `validateInsight()` (순수 함수 → 테스트)
@@ -284,6 +287,7 @@ type AnalyzeResponse =
 
 - 결과 캐시: `hash(입력 + model + PROMPT_VERSION)` 키로 7일 (분류·코멘트 각각)
 - 일일 상한 `AI_DAILY_LIMIT` (기본 100) — AI 호출 **직전**에 `api_cache`에 `source='ai-call'` 기록을 남기고, 오늘(KST) 기록 수로 집계 (`ai/quota.ts` `reserveAiCall`). 성공 결과가 아니라 **시도**를 세서 실패를 반복하는 입력으로 우회 불가. 집계·기록 실패 시엔 막지 않음
+- **호출자(IP 해시)별 일일 상한** `AI_PER_CLIENT_DAILY_LIMIT` (기본 20) — 한 사람이 전체 한도를 다 쓰지 못하게. IP는 `clientKey`로 SHA-256 해시 앞 16자만 `ai-call` 행 payload에 저장(원문 저장 안 함, 2일 후 만료)
 - 모델당 타임아웃 12초 (대체 모델까지 최악 24초)
 - Gemini 429 → `UPSTREAM_RATE_LIMIT`, `finishReason`이 `SAFETY`/`MAX_TOKENS`/`RECITATION`이거나 빈 응답 → `UPSTREAM_ERROR`
 
@@ -347,7 +351,7 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 - 섹션별 스켈레톤 / 에러 박스 (부분 실패 표시)
 - 모든 차트·카드에 **기준월과 출처**(통계청 KOSIS / 관세청) 표기
 - 모바일 375px: 카드 세로 쌓기, 표 가로 스크롤
-- URL `?q=&hs=` 반영 → 결과 공유 가능
+- URL `?q=상품명&category=&hs=` 반영 → 결과 공유 가능. 열 때 상품군·HS가 있으면 **AI 분류 없이** 바로 분석(한도 절약), 상품명만 있으면 분류부터. 값은 서버(`page.tsx`)에서 `readUrlState`로 검증해 초기 상태로 전달
 
 ---
 
@@ -406,7 +410,9 @@ keywordfit/
       ├─ supabase.ts             # supabaseCacheStore, getOrFetch (서버 전용)
       ├─ section.ts              # Section 타입, toSection
       ├─ format.ts               # 월·달러·원·증감률 표시
-      ├─ period.ts               # 월 범위 계산 (순수)
+      ├─ period.ts               # 월 범위 계산, startOfDayKst (순수)
+      ├─ clientKey.ts            # 요청 IP 해시 (AI 호출자별 상한)
+      ├─ urlState.ts             # 공유 링크 쿼리 읽기·검증·쓰기 (순수)
       ├─ metrics.ts              # yoy, unitPrice, shares (순수)
       ├─ opportunity.ts          # classifyOpportunity, toOpportunitySection (순수)
       ├─ kosis/
@@ -442,6 +448,7 @@ keywordfit/
 | `GEMINI_MODEL` | 모델 교체용 (기본 `gemini-flash-lite-latest`) | 서버 |
 | `GEMINI_FALLBACK_MODEL` | 일시 장애 시 대체 (기본 `gemini-flash-latest`) | 서버 |
 | `AI_DAILY_LIMIT` | AI 일일 상한 (기본 100) | 서버 |
+| `AI_PER_CLIENT_DAILY_LIMIT` | 호출자(IP 해시)별 AI 일일 상한 (기본 20) | 서버 |
 | `SUPABASE_URL` | Supabase 프로젝트 URL | 서버 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 키 | 서버 |
 
