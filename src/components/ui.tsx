@@ -11,12 +11,12 @@ export function Card({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** 섹션·요청 실패 표시 (사용자 메시지만, 원인은 서버 로그) */
-export function ErrorBox({ code, title }: { code: ErrorCode; title?: string }) {
+/** 섹션·요청 실패 표시 (사용자 메시지만, 원인은 서버 로그). message가 있으면 코드 기본 문구 대신 사용. */
+export function ErrorBox({ code, title, message }: { code: ErrorCode; title?: string; message?: string }) {
   return (
     <p role="alert" className="rounded-xl border border-danger/40 bg-surface p-4 text-sm text-danger">
       {title && <span className="font-semibold">{title}: </span>}
-      {ERROR_MESSAGES[code]}
+      {message ?? ERROR_MESSAGES[code]}
     </p>
   );
 }
