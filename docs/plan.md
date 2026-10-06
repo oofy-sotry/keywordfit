@@ -82,12 +82,12 @@
 
 ## D5 — 진입 판단 지표 + AI 코멘트 (F4)
 
-- [ ] `opportunity.ts` `classifyOpportunity` + 경계값 테스트 (**먼저**)
-- [ ] `/api/analyze`에 `opportunity` 섹션, `OpportunityBadge`
-- [ ] `ai/validate.ts` `validateInsight` + 테스트 (**먼저**)
-- [ ] `ai/insight.ts`, `/api/insight` — 서버에서 데이터 재조회, 자리표시자 치환, 캐시, 일일 상한
-- [ ] `InsightPanel` — 코멘트 + 근거 지표 칩
-- [ ] 품목 5개로 결과 품질 확인 → 프롬프트 수정 내역 ai-log 기록
+- [x] `opportunity.ts` `classifyOpportunity` + 경계값 테스트 (**먼저**), `toOpportunitySection`
+- [x] `/api/analyze`에 `opportunity` 섹션(+ 라우트 테스트), `OpportunityBadge`
+- [x] `ai/validate.ts` `validateInsight` + 테스트 (**먼저**), `ai/insightMetrics.ts`(+ 테스트)
+- [x] `ai/insight.ts`(+ 테스트), `/api/insight`(+ 테스트) — 서버 재조회, 자리표시자 치환, 기준월 포함 캐시 키, 일일 상한
+- [x] `InsightPanel` — 코멘트 + 근거 지표 칩, 버튼 클릭 시에만 호출
+- [x] 품목 4개로 결과 확인: 검증 탈락 0건(AI가 숫자 규칙 준수), 코멘트는 수치를 다시 읽는 수준 → D6에 프롬프트 개선
 
 **완료 기준:** 코멘트 3~4개가 근거 지표와 함께 표시되고, AI가 지어낸 숫자는 걸러진다.
 
