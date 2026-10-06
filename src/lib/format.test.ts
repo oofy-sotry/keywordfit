@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { formatMonth, formatSignedPercent, formatUsd } from "./format";
+import { formatMonth, formatShortMonth, formatSignedPercent, formatUsd } from "./format";
 
 describe("formatMonth", () => {
   it("YYYYMM을 YYYY.MM으로", () => {
     expect(formatMonth("202608")).toBe("2026.08");
+  });
+});
+
+describe("formatShortMonth", () => {
+  it("차트 축용 YY.MM", () => {
+    expect(formatShortMonth("202608")).toBe("26.08");
   });
 });
 
