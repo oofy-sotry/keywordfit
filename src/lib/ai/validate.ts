@@ -100,6 +100,11 @@ export function validateInsight(
       warnings.push(`값이 없는 지표 사용 제외: ${missing.join(", ")}`);
       continue;
     }
+    if (/\}\}\s*위/.test(text)) {
+      // 숫자를 못 쓰니 "1위" 자리에 자리표시자를 넣는 경우 ("{{topCountry}}위" → "미국위")
+      warnings.push(`자리표시자를 순위 숫자로 오용해 제외: ${text}`);
+      continue;
+    }
     if (/\d/.test(text.replace(PLACEHOLDER, ""))) {
       warnings.push(`자리표시자 밖 숫자 제외: ${text}`);
       continue;
