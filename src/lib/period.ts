@@ -43,3 +43,11 @@ export function splitByYear(start: Yyyymm, end: Yyyymm): MonthRange[] {
   }
   return ranges;
 }
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** 한국 시간 기준 오늘 0시 (AI 일일 상한 집계 기준). 서버(Vercel)는 UTC라 직접 계산한다. */
+export function startOfDayKst(now: Date): Date {
+  const kst = new Date(now.getTime() + KST_OFFSET_MS);
+  return new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) - KST_OFFSET_MS);
+}
