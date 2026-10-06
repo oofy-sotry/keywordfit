@@ -1,3 +1,6 @@
+import type { ImportSummary, MarketSummary } from "@/lib/metrics";
+import type { Section } from "@/lib/section";
+
 /**
  * 진입 판단 지표 (design.md §5). 시장 성장률 × 수입 증가율 4분면.
  * 임계값은 초안 — D6에 대표 품목 20개 분포를 보고 조정하고 근거를 ai-log에 남긴다.
@@ -29,4 +32,19 @@ export function classifyOpportunity(marketYoy: number | null, importYoy: number 
   const importUp = importYoy >= IMPORT_GROWTH_THRESHOLD;
   const grade: OpportunityGrade = marketUp ? (importUp ? "growing" : "opportunity") : importUp ? "overheated" : "shrinking";
   return { grade, ...GRADES[grade], marketYoy, importYoy };
+}
+
+/**
+ * 두 섹션 결과로 진입 판단 섹션을 만든다. 한쪽이라도 요청하지 않았으면 null,
+ * 실패했거나 증감률이 없으면 NO_DATA. 둘 다 캐시일 때만 cached.
+ */
+export function toOpportunitySection(
+  market: Section<MarketSummary> | null,
+  imports: Section<ImportSummary> | null,
+): Section<Opportunity> | null {
+  if (!market || !imports) return null;
+  if (!market.ok || !imports.ok) return { ok: false, error: "NO_DATA" };
+  const opportunity = classifyOpportunity(market.data.yoy, imports.data.yoy);
+  if (!opportunity) return { ok: false, error: "NO_DATA" };
+  return { ok: true, data: opportunity, cached: market.cached && imports.cached };
 }
