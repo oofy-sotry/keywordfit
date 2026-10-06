@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { CountryShareTable } from "@/components/CountryShareTable";
 import { ImportChart } from "@/components/ImportChart";
 import { UnitPriceChart } from "@/components/UnitPriceChart";
 import { ERROR_MESSAGES, type ErrorCode } from "@/lib/errors";
 import { formatMonth, formatSignedPercent, formatUsd } from "@/lib/format";
+import { isHsCode, normalizeHsInput } from "@/lib/hs/code";
 import type { ImportSummary } from "@/lib/metrics";
 import type { Section } from "@/lib/section";
 
-type AnalyzeResponse = { hs: string; imports: Section<ImportSummary> };
+type AnalyzeResponse = { ok: true; hs: string; imports: Section<ImportSummary> } | { ok: false; error: ErrorCode };
+type AnalyzeResult = Extract<AnalyzeResponse, { ok: true }>;
 
 // D4에서 상품명 → HS코드 분류(F1)로 대체. 지금은 HS코드 직접 입력 + 예시.
 const EXAMPLES = [
@@ -22,31 +24,38 @@ type State =
   | { status: "idle" }
   | { status: "loading"; hs: string }
   | { status: "error"; error: ErrorCode }
-  | { status: "done"; result: AnalyzeResponse };
+  | { status: "done"; result: AnalyzeResult };
 
 export function ImportExplorer() {
   const [hs, setHs] = useState("");
   const [state, setState] = useState<State>({ status: "idle" });
+  // 마지막 요청 번호. 늦게 도착한 이전 응답이 최신 결과를 덮어쓰지 않게 한다.
+  const latestRequest = useRef(0);
+  const loading = state.status === "loading";
 
   async function analyze(code: string) {
     setHs(code);
+    if (!isHsCode(code)) {
+      setState({ status: "error", error: "INVALID_INPUT" });
+      return;
+    }
+    const requestId = ++latestRequest.current;
     setState({ status: "loading", hs: code });
+
+    let next: State;
     try {
       const response = await fetch(`/api/analyze?hs=${encodeURIComponent(code)}`);
-      const body = await response.json();
-      if (!response.ok) {
-        setState({ status: "error", error: body.error ?? "UPSTREAM_ERROR" });
-        return;
-      }
-      setState({ status: "done", result: body });
+      const body: AnalyzeResponse = await response.json();
+      next = body.ok ? { status: "done", result: body } : { status: "error", error: body.error };
     } catch {
-      setState({ status: "error", error: "UPSTREAM_ERROR" });
+      next = { status: "error", error: "UPSTREAM_ERROR" };
     }
+    if (requestId === latestRequest.current) setState(next);
   }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    const code = hs.replace(/[.\-\s]/g, "");
+    const code = normalizeHsInput(hs);
     if (code) analyze(code);
   }
 
@@ -67,7 +76,7 @@ export function ImportExplorer() {
           />
           <button
             type="submit"
-            disabled={state.status === "loading"}
+            disabled={loading}
             className="rounded-lg bg-foreground px-4 py-2 font-medium text-background disabled:opacity-50"
           >
             분석
@@ -79,7 +88,8 @@ export function ImportExplorer() {
               key={example.code}
               type="button"
               onClick={() => analyze(example.code)}
-              className="rounded-full border border-border px-3 py-1 text-secondary hover:border-series-1"
+              disabled={loading}
+              className="rounded-full border border-border px-3 py-1 text-secondary hover:border-series-1 disabled:opacity-50"
             >
               {example.label} <span className="text-muted">{example.code}</span>
             </button>
