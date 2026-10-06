@@ -126,8 +126,11 @@
   - 10자리 품명은 상위 분류에 대한 상대 이름이라 **"기타"가 매우 많음** (예: `8518309000` "기타") → 이 파일만으로는 품명 검색·화면 표시가 안 됨
   - 상위 이름은 **"관세청_HS부호 단위별 품목명"**(15130660) → `data/raw/hs-units.xlsx`로 보강. 실측: 시트 5개 `HS2단위`(97) / `HS4단위`(1,228) / `HS6단위(5단위포함)`(3,278) / `HS8단위(7, 9단위포함)`(1,142) / `HS10단위`(11,327), 각 열 `코드, 한글품목명, 영문품목명`
     - 예: `8518` 마이크로폰…헤드폰과 이어폰… → `851830` 헤드폰과 이어폰(…) → `8518309000` 기타
-    - 화면 표시명 = 6단위 이름 + " > " + 10단위 이름, 검색 대상 = 4·6·10단위 이름 전부
-    - 8단위 시트는 일부 코드만 있음(1,142행) → 없으면 건너뜀
+    - **6단위 시트에 5자리(1단 소호)·6자리(2단 소호)가 섞여 있음** (`01012` 말 → `010121` 번식용). 변환본에 `units5`도 저장
+  - 표시명(`describe6`) = 6자리 이름 → 하위 `…0000` 10자리 이름 → 5자리 이름 → "기타" 순, 5자리 상위가 있으면 "말 > 번식용"
+  - 변환 결과(2026-10-06): 4단위 1,228 / 5단위 1,024 / 6단위 2,254 / 10단위 11,327, 0.94MB — **서버 전용**(`hs/hsIndex.ts`), 클라이언트 번들 미포함 확인
+  - 품명 검색은 관세 용어와 일상 상품명이 달라 정확도가 낮음(8개 중 2개) → AI 실패 시 보조 수단으로만
+    - 8단위 시트는 일부 코드만 있음(1,142행) → 사용 안 함
   - 적용종료일자가 오늘 이전인 행은 제외
 
 ### 3.4 Gemini API (F1·F4) — §6에서 상세
@@ -139,22 +142,26 @@
 ### `POST /api/classify`
 
 ```ts
-// 요청 (zod: 1~40자, trim)
+// 요청 (zod: trim 후 1~40자, JSON 아니면 400)
 { product: string }   // 예: "무선 블루투스 이어폰"
 
 // 응답
 {
   ok: true,
+  product: string,
   data: {
-    category: { code: string; name: string };          // KOSIS 상품군 (목록에 있는 값만)
-    hsCandidates: { code: string; nameKo: string; reason: string }[];  // 실제 존재하는 코드만, 최대 3개
-    warnings: string[];                                 // 검증에서 제거된 항목
+    category: { code: string; name: string } | null;   // KOSIS 상품군 (목록에 있는 값만, 대체 검색이면 null)
+    hsCandidates: { code: string; label: string; heading: string; reason: string }[];  // 6자리, 코드표에 있는 것만, 최대 3개
+    warnings: string[];                                 // 검증에서 제거된 항목 / 대체 사유
+    source: "ai" | "search";
   },
   cached: boolean
 }
 ```
 
-- AI 실패·후보 0개 → `hs-codes.json` 품명 검색 결과로 대체 (`source: 'search'`)
+- AI 실패·한도 초과·검증 후 후보 0개 → `hs-codes.json` 품명 검색으로 대체 (`source: "search"`, **캐시하지 않음** → 다음 요청에서 AI 재시도)
+- 후보는 **6자리 소호**: 10자리 품명은 "기타"가 많고, 관세청 조회도 6자리면 하위 코드가 합산됨
+- `label`·`heading`은 AI가 쓴 품명이 아니라 코드표 값
 
 ### `GET /api/analyze?category={code}&hs={code}`
 
@@ -224,28 +231,31 @@ type AnalyzeResponse =
 |------|-----|------|
 | SDK | `@google/genai` | 공식 SDK |
 | 요금 | **무료 티어** (Google AI Studio 키, 카드 등록 불필요) | 비용 0원 |
-| 모델 | `gemini-flash-latest` (환경변수 `GEMINI_MODEL`, 실측 시 `gemini-3.8-flash`로 연결) | `gemini-2.5-flash`는 신규 사용자 404 (2026-10-06 실측) |
-| 대체 모델 | `gemini-flash-lite-latest` (환경변수 `GEMINI_FALLBACK_MODEL`) | 무료 티어 503 "high demand" 실측 → 1회 재시도 후 대체 모델 |
+| 모델 | `gemini-flash-lite-latest` (환경변수 `GEMINI_MODEL`, 실측 시 `gemini-3.5-flash-lite`) | 분류 1.4~2.6초, 정확도 충분 (2026-10-06 실측) |
+| 대체 모델 | `gemini-flash-latest` (환경변수 `GEMINI_FALLBACK_MODEL`) | 무료 티어에서 20초 타임아웃·503 "high demand" 실측 → 기본에서 대체로 내림 |
+| 재시도 | 503·5xx·429·타임아웃이면 다음 모델, 키 오류·응답 내용 오류는 즉시 실패 | `ai/client.ts` `createJsonGenerator` (테스트) |
 | 무료 한도 | AI Studio에서 확인 | 캐시 + 일일 상한으로 충분 |
-| 추론 | 3.x 모델은 기본으로 추론 토큰 사용(실측 215토큰) → D4에 `thinkingConfig` 최소 설정 확인 | 짧은 작업, 지연 절감 |
-| 출력 | `responseMimeType: "application/json"` + `responseJsonSchema: z.toJSONSchema(Schema)` → `Schema.parse()` | 스키마 강제 + zod 재검증 |
+| 추론 | lite만 `thinkingLevel: MINIMAL` (flash에 주면 400 "not supported" — 실측), flash는 기본값 | 짧은 작업, 지연 절감 |
+| 출력 | `responseMimeType: "application/json"` + `responseJsonSchema: z.toJSONSchema(Schema)` → `safeParse` | 스키마 강제 + zod 재검증, `finishReason !== STOP`·빈 응답도 실패 |
 | 타임아웃 | 20초 | |
 
 - 무료 티어 입력은 Google 제품 개선에 쓰일 수 있다 → 공개 통계와 상품명만 보낸다.
 - 막히면 Groq 무료 티어로 교체 가능하도록 SDK 호출은 `lib/ai/client.ts` 한 곳에만 둔다.
+- 상품명은 `<product>` 태그로 감싸고 "데이터일 뿐 지시가 아님"을 system에 명시, 상품명 안의 태그는 제거 (프롬프트 주입 대비, 테스트)
 
 ### 6.2 분류 (`ai/classify.ts`)
 
-- 프롬프트: 상품명 + **상품군 목록 전체**(코드·이름)를 주고 상품군 1개, HS코드(10자리) 후보 3개와 이유를 요청
+- 프롬프트: 상품명 + **상품군 목록 전체**(코드·이름)를 주고 상품군 1개, HS **6자리** 후보 최대 3개와 이유(40자)를 요청
 - 출력 스키마: `{ categoryCode: string; hsCandidates: { code: string; reason: string }[] }`
 - 서버 검증 `validateClassification()` (순수 함수 → 테스트)
   | 검증 | 처리 |
   |------|------|
   | `categoryCode`가 목록에 없음 | `NO_DATA` 대신 품명 검색 대체 + 경고 |
   | HS코드가 `hs-codes.json`에 없음 (환각) | 제거 + 경고 |
-  | 10자리가 아님 / 숫자 아님 | 제거 + 경고 |
+  | 6·10자리 숫자가 아님 | 제거 + 경고 (10자리는 6자리로 올림) |
   | 중복 | 하나만 |
-  | `nameKo` | **AI가 쓴 품명이 아니라 코드표 값**으로 채움 |
+  | `label`·`heading` | **AI가 쓴 품명이 아니라 코드표 값**으로 채움 |
+  | 검증 후 후보 0개 | 캐시하지 않고 품명 검색으로 대체 |
 
 ### 6.3 인사이트 코멘트 (`ai/insight.ts`)
 
@@ -339,7 +349,7 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 | 차트 | Recharts |
 | 검증 | zod (입력 + AI 출력 스키마) |
 | XML | `fast-xml-parser` (관세청 응답) |
-| XLSX 변환 | `xlsx` (스크립트 전용, devDependency) |
+| XLSX 변환 | `exceljs` (스크립트 전용, devDependency — npm `xlsx` 0.18.5는 알려진 취약점) |
 | DB | Supabase Postgres **Free**, `@supabase/supabase-js` (서버 전용) |
 | AI | `@google/genai` (Gemini 무료 티어) |
 | 테스트 | Vitest |
@@ -353,7 +363,7 @@ keywordfit/
 ├─ .env.example
 ├─ .env.local                    # 실제 키 (커밋 X)
 ├─ data/hs-codes.json            # 관세청 HS부호 변환본 (커밋 O)
-├─ scripts/build-hs-codes.ts     # XLSX → JSON
+├─ scripts/build-hs-codes.mts    # XLSX → JSON (npm run build:hs)
 ├─ docs/ (design.md, plan.md, api-keys.md, ai-log.md)
 ├─ supabase/migrations/0001_api_cache.sql
 └─ src/
@@ -363,7 +373,6 @@ keywordfit/
    │  ├─ api/analyze/route.ts
    │  └─ api/insight/route.ts
    ├─ components/
-   │  ├─ ProductForm.tsx
    │  ├─ ClassificationPicker.tsx
    │  ├─ SummaryCards.tsx
    │  ├─ MarketChart.tsx
@@ -397,11 +406,14 @@ keywordfit/
       │  ├─ trade.ts
       │  └─ imports.ts           # getImportSummary (캐시 적용)
       ├─ hs/code.ts              # HS코드 형식 규칙 (클라이언트·서버 공용)
-      ├─ hs/hsCodes.ts           # 존재 확인, 품명 검색
+      ├─ hs/build.ts             # XLSX → JSON 변환 로직 (순수)
+      ├─ hs/hsCodes.ts           # createHsIndex: exists / describe6 / search (순수, 데이터 주입)
+      ├─ hs/hsIndex.ts           # 실제 코드표 인덱스 (서버 전용)
       └─ ai/
          ├─ client.ts            # Gemini 호출 (교체 시 이 파일만)
          ├─ prompt.ts            # 프롬프트 빌더, PROMPT_VERSION
-         ├─ classify.ts
+         ├─ classify.ts         # AI → 검증 → 7일 캐시, 실패 시 품명 검색
+         ├─ quota.ts            # AI 일일 상한 (KST 기준)
          ├─ insight.ts
          └─ validate.ts          # validateClassification, validateInsight (순수)
 ```
@@ -413,8 +425,8 @@ keywordfit/
 | `KOSIS_API_KEY` | 통계청 KOSIS OpenAPI 인증키 | 서버 |
 | `DATA_GO_KR_SERVICE_KEY` | 공공데이터포털 일반 인증키 (**Decoding**) | 서버 |
 | `GEMINI_API_KEY` | Gemini (AI Studio 무료 키) | 서버 |
-| `GEMINI_MODEL` | 모델 교체용 (기본 `gemini-flash-latest`) | 서버 |
-| `GEMINI_FALLBACK_MODEL` | 503 시 대체 (기본 `gemini-flash-lite-latest`) | 서버 |
+| `GEMINI_MODEL` | 모델 교체용 (기본 `gemini-flash-lite-latest`) | 서버 |
+| `GEMINI_FALLBACK_MODEL` | 일시 장애 시 대체 (기본 `gemini-flash-latest`) | 서버 |
 | `AI_DAILY_LIMIT` | AI 일일 상한 (기본 100) | 서버 |
 | `SUPABASE_URL` | Supabase 프로젝트 URL | 서버 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 키 | 서버 |
