@@ -40,7 +40,8 @@ describe("normalizeProductKey", () => {
 describe("buildInsightPrompt", () => {
   const input = {
     categoryName: "가전·전자",
-    hsLabel: "헤드폰과 이어폰",
+    hsLabel: "기타",
+    hsHeading: "조제 식료품(따로 분류되지 않은 것으로 한정한다)",
     metrics: {
       marketYoy: "+5.3%",
       marketLatest: "1.34조원",
@@ -57,7 +58,7 @@ describe("buildInsightPrompt", () => {
     const { user } = buildInsightPrompt(input);
     expect(user).toContain("{{marketYoy}}");
     expect(user).toContain("+5.3%");
-    expect(user).toContain("헤드폰과 이어폰");
+    expect(user).toContain("기타");
     expect(user).not.toContain("{{unitPrice}}");
   });
 
@@ -78,7 +79,21 @@ describe("buildInsightPrompt", () => {
     expect(buildInsightPrompt(input).system).not.toContain("metrics");
   });
 
-  it("코멘트용 버전이 따로 있다 (v2: 문장 틀 캐시·metrics 제거)", () => {
-    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v2");
+  it("품목명이 '기타'여도 맥락이 전달되도록 상위 분류 이름을 함께 준다", () => {
+    expect(buildInsightPrompt(input).user).toContain("상위 분류: 조제 식료품");
+  });
+
+  it("최근 월 거래액은 한 달 값이라고 못박는다 (석 달 규모로 오해한 사례)", () => {
+    expect(buildInsightPrompt(input).user).toMatch(/\{\{marketLatest\}\} = 1\.34조원 {2}\(.*한 달.*\)/);
+  });
+
+  it("말투(~요)와 시사점 중심을 지시한다", () => {
+    const { system } = buildInsightPrompt(input);
+    expect(system).toContain("니다");
+    expect(system).toContain("시사점");
+  });
+
+  it("코멘트용 버전 (v3: 상위 분류·한 달 명시·말투)", () => {
+    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v3");
   });
 });
