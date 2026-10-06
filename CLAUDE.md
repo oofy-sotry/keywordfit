@@ -21,7 +21,7 @@ Next.js App Router + TypeScript, Route Handlers(Node.js), Tailwind, Recharts, zo
 - `.env.local`은 절대 커밋하지 않는다. 새 환경변수를 추가하면 `.env.example`과 `design.md` §9도 갱신.
 - 외부 API 호출은 `src/lib/kosis/*`, `src/lib/customs/*`, `src/lib/ai/*`에만 둔다. Route Handler는 조립만 한다. Gemini SDK 호출은 `ai/client.ts` 한 곳.
 - 외부 API 결과는 `supabase.ts`의 `getOrFetch`(로직은 `cache.ts` `createCache`)를 거친다. 캐시 실패가 요청 실패가 되면 안 된다.
-- 캐시에 저장하는 요약 타입(`ImportSummary`, `MarketSummary` 등)의 필드를 바꾸면 `cache.ts`의 `CACHE_VERSION`을 올린다.
+- 캐시에 저장하는 값의 형태·의미를 바꾸면 `cache.ts`의 `CACHE_VERSIONS`에서 **그 출처만** 올린다 (전체를 올리면 AI 캐시까지 지워져 AI 재호출·결과 변동).
 - 커밋 전 `git diff --cached --stat`으로 스테이징 범위를 확인한다 (`git mv` 등으로 미리 스테이징된 변경이 다른 커밋에 섞이지 않게).
 - 계산·변환 로직은 순수 함수로 분리하고 테스트를 먼저 쓴다 (응답 파싱, 기간 계산, YoY·단가·점유율, 진입 판단, AI 출력 검증).
 - KOSIS·공공데이터포털은 **오류도 HTTP 200으로 온다** → 본문(`err`, `resultCode`)을 반드시 검사.
