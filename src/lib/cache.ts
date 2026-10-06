@@ -13,7 +13,7 @@ export type Cached<T> = { data: T; cached: boolean };
  * 캐시 데이터 형태 버전. 저장하는 요약(ImportSummary, MarketSummary 등)의 필드를 바꾸면 올린다.
  * 키 앞에 붙어서 이전 형태의 캐시는 자동으로 무시된다 (만료 전이라도).
  */
-export const CACHE_VERSION = "v1";
+export const CACHE_VERSION = "v2"; // v2: recent12Usd / recent12Total 추가
 
 type CacheOptions = { version?: string; now?: () => Date };
 
