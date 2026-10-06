@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
+/* 색은 역할 토큰으로만 쓴다. 차트 색은 dataviz 기본 팔레트 (단일 계열 = series-1). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f6f6f4;
+  --surface: #fcfcfb;
+  --foreground: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #6f6e69;
+  --border: #e4e3df;
+  --grid: #ecebe7;
+  --series-1: #2a78d6;
+  --danger: #c4302b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --background: #111110;
+    --surface: #1a1a19;
+    --foreground: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #9a998f;
+    --border: #2e2e2b;
+    --grid: #262624;
+    --series-1: #3987e5;
+    --danger: #e66767;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #111110;
+  --surface: #1a1a19;
+  --foreground: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #9a998f;
+  --border: #2e2e2b;
+  --grid: #262624;
+  --series-1: #3987e5;
+  --danger: #e66767;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-series-1: var(--series-1);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans), "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
