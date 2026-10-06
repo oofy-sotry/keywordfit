@@ -293,7 +293,8 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 
 - `getOrFetch(key, source, ttl, fetcher)` 하나로 통일, upsert 저장. 만료 행은 조회 시 `expires_at > now()`로 무시.
   - 구현: `cache.ts` `createCache(store)`(저장소 주입 → 가짜 저장소로 테스트) + `supabase.ts`의 `supabaseCacheStore`·`getOrFetch` (캐시 읽기·쓰기 각 1.5초 제한)
-  - 캐시 키 (실제): `customs:{hs}:{start}-{end}`, `kosis:{category}:25`
+  - 캐시 키 (실제): `{CACHE_VERSION}:customs:{hs}:{start}-{end}`, `{CACHE_VERSION}:kosis:{category}:25`
+  - **요약 타입 필드를 바꾸면 `CACHE_VERSION`을 올린다** → 이전 형태 캐시는 만료 전이라도 무시 (v2: `recent12Usd`/`recent12Total` 추가)
 
 ---
 
