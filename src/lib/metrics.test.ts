@@ -115,6 +115,10 @@ describe("summarizeImports", () => {
     expect(summarizeImports(rows, months)!.yoy).toBe(16.7);
   });
 
+  it("최근 12개월 수입액 합계", () => {
+    expect(summarizeImports(rows, months)!.recent12Usd).toBe(140 * 12);
+  });
+
   it("수입국 점유율은 최근 12개월 기준", () => {
     expect(summarizeImports(rows, months)!.topCountries).toEqual([
       { name: "중국", share: 85.7 },
@@ -155,6 +159,17 @@ describe("summarizeMarket", () => {
 
   it("최근 3개월 합 vs 전년 동기 3개월 합 증감률", () => {
     expect(summarizeMarket(rows)!.yoy).toBe(10);
+  });
+
+  it("최근 12개월 거래액 합계", () => {
+    // 202509~202605 9개월×90 + 202606~202608 3개월×110
+    expect(summarizeMarket(rows)!.recent12Total).toBe(90 * 9 + 110 * 3);
+  });
+
+  it("최근 12개월에 빈 값이 있거나 12개월 미만이면 합계 null", () => {
+    const withGap = rows.map((r) => (r.month === "202601" ? market(r.month, null) : r));
+    expect(summarizeMarket(withGap)!.recent12Total).toBeNull();
+    expect(summarizeMarket(rows.slice(-11))!.recent12Total).toBeNull();
   });
 
   it("비교 구간에 빈 값이 있으면 증감률 null", () => {
