@@ -3,12 +3,13 @@
 import { useRef, useState, type FormEvent } from "react";
 import { ClassificationPicker } from "@/components/ClassificationPicker";
 import { ImportSection } from "@/components/ImportSection";
+import { ManualQueryForm } from "@/components/ManualQueryForm";
 import { MarketSection } from "@/components/MarketSection";
 import { ErrorBox, SectionSkeleton } from "@/components/ui";
 import type { ProductClassification } from "@/lib/ai/classify";
 import type { ErrorCode } from "@/lib/errors";
 import { isHsCode, normalizeHsInput } from "@/lib/hs/code";
-import { isMarketCategory, MARKET_CATEGORIES, type MarketCategoryCode } from "@/lib/kosis/categories";
+import { isMarketCategory, type MarketCategoryCode } from "@/lib/kosis/categories";
 import type { ImportSummary, MarketSummary } from "@/lib/metrics";
 import type { Section } from "@/lib/section";
 
@@ -125,8 +126,7 @@ export function AnalyzeExplorer() {
     classifyAndAnalyze(product);
   }
 
-  function onManualSubmit(event: FormEvent) {
-    event.preventDefault();
+  function onManualSubmit() {
     setClassify({ status: "idle" });
     analyze({ category, hs: normalizeHsInput(hs) });
   }
@@ -171,43 +171,14 @@ export function AnalyzeExplorer() {
           </div>
         </form>
 
-        <details className="text-sm">
-          <summary className="cursor-pointer text-secondary">상품군·HS코드 직접 지정</summary>
-          <form onSubmit={onManualSubmit} className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-            <label className="flex flex-col gap-1 font-medium">
-              상품군
-              <select
-                value={category}
-                onChange={(e) => setCategory(isMarketCategory(e.target.value) ? e.target.value : "")}
-                className="rounded-lg border border-border bg-surface px-3 py-2 font-normal outline-none focus:border-series-1"
-              >
-                <option value="">선택 안 함</option>
-                {MARKET_CATEGORIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 font-medium">
-              HS코드 (6·10자리)
-              <input
-                value={hs}
-                onChange={(e) => setHs(e.target.value)}
-                inputMode="numeric"
-                placeholder="예: 851830"
-                className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 font-normal outline-none focus:border-series-1"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-lg border border-border px-4 py-2 font-medium disabled:opacity-50"
-            >
-              조회
-            </button>
-          </form>
-        </details>
+        <ManualQueryForm
+          category={category}
+          hs={hs}
+          disabled={busy}
+          onCategoryChange={setCategory}
+          onHsChange={setHs}
+          onSubmit={onManualSubmit}
+        />
       </div>
 
       {classify.status === "loading" && (
