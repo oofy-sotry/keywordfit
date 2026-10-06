@@ -45,7 +45,7 @@ beforeEach(() => {
 describe("getInsight", () => {
   it("서버에서 다시 조회한 우리 데이터로 자리표시자를 채운다", async () => {
     vi.mocked(generateJson).mockResolvedValue({
-      data: { points: [{ text: "시장은 {{marketYoy}}, 수입은 {{importYoy}} 늘었어요.", metrics: [] }] },
+      data: { points: [{ text: "시장은 {{marketYoy}}, 수입은 {{importYoy}} 늘었어요." }] },
       model: "lite",
     });
     const { data } = await getInsight("0021", "851830");
@@ -55,13 +55,34 @@ describe("getInsight", () => {
   });
 
   it("캐시 키에 프롬프트 버전·모델·상품군·HS·데이터 기준월이 들어간다 (새 달 데이터면 새로 생성)", async () => {
-    vi.mocked(generateJson).mockResolvedValue({ data: { points: [{ text: "{{topCountry}} 비중이 커요.", metrics: [] }] }, model: "lite" });
+    vi.mocked(generateJson).mockResolvedValue({ data: { points: [{ text: "{{topCountry}} 비중이 커요." }] }, model: "lite" });
     await getInsight("0021", "851830");
     expect(getOrFetch.mock.calls[0][0]).toMatch(/^ai-insight:insight-v\d+:lite:0021:851830:202608:202607$/);
   });
 
+  it("캐시에는 값이 아니라 문장 틀을 저장하고, 캐시 적중 시에도 지금 데이터로 채운다", async () => {
+    vi.mocked(generateJson).mockResolvedValue({ data: { points: [{ text: "시장은 {{marketYoy}} 성장했어요." }] }, model: "lite" });
+    await getInsight("0021", "851830");
+    const fetcher = getOrFetch.mock.calls[0][3] as () => Promise<unknown>;
+    expect(await fetcher()).toMatchObject({ templates: [{ text: "시장은 {{marketYoy}} 성장했어요.", metrics: ["marketYoy"] }] });
+
+    // 같은 기준월이지만 KOSIS가 수치를 고친 뒤 캐시 적중 → 문장도 새 값
+    getOrFetch.mockResolvedValueOnce({
+      data: { templates: [{ text: "시장은 {{marketYoy}} 성장했어요.", metrics: ["marketYoy"] }], warnings: [] },
+      cached: true,
+    });
+    const { getMarketSummary } = await import("@/lib/kosis/market");
+    vi.mocked(getMarketSummary).mockResolvedValueOnce({
+      data: { series: [], latest: 1, yoy: 9.9, recent12Total: 1, asOf: "202608" },
+      cached: true,
+    });
+    const { data, cached } = await getInsight("0021", "851830");
+    expect(cached).toBe(true);
+    expect(data.points).toEqual([{ text: "시장은 +9.9% 성장했어요.", metrics: ["marketYoy"] }]);
+  });
+
   it("검증 후 남은 코멘트가 없으면 UPSTREAM_ERROR (캐시하지 않음)", async () => {
-    vi.mocked(generateJson).mockResolvedValue({ data: { points: [{ text: "약 30% 성장", metrics: [] }] }, model: "lite" });
+    vi.mocked(generateJson).mockResolvedValue({ data: { points: [{ text: "약 30% 성장" }] }, model: "lite" });
     await expect(getInsight("0021", "851830")).rejects.toMatchObject({ code: "UPSTREAM_ERROR" });
   });
 
