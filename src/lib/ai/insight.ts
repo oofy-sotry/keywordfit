@@ -33,7 +33,11 @@ export type Insight = {
  * 캐시에는 자리표시자가 남은 문장 틀만 저장하고 값은 매 요청 지금 데이터로 채운다
  * — 같은 기준월에 KOSIS가 수치를 고쳐도 문장 속 수치와 근거 칩이 항상 일치.
  */
-export async function getInsight(category: MarketCategoryCode, hs: string): Promise<Cached<Insight>> {
+export async function getInsight(
+  category: MarketCategoryCode,
+  hs: string,
+  client = "unknown",
+): Promise<Cached<Insight>> {
   const [market, imports] = await Promise.all([getMarketSummary(category), getImportSummary(hs)]);
   const opportunity = classifyOpportunity(market.data.yoy, imports.data.yoy);
   const metrics = buildInsightMetrics(market.data, imports.data, opportunity);
@@ -49,7 +53,7 @@ export async function getInsight(category: MarketCategoryCode, hs: string): Prom
   ].join(":");
 
   const result = await getOrFetch(key, "ai-insight", TTL_SECONDS, async () => {
-    await reserveAiCall();
+    await reserveAiCall({ client });
     const hsInfo = hsIndex.describe6(hs.slice(0, 6));
     const prompt = buildInsightPrompt({
       categoryName: categoryName(category),
