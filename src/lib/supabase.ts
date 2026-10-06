@@ -39,3 +39,15 @@ export const supabaseCacheStore: CacheStore = {
 
 /** 외부 API 결과는 이 함수를 거친다 (CLAUDE.md 규칙). */
 export const { getOrFetch } = createCache(supabaseCacheStore);
+
+/** 오늘(한국 시간) 새로 만든 AI 결과 수 = 실제 AI 호출 수 (캐시 적중은 행을 만들지 않음). */
+export async function countAiCallsToday(since: Date): Promise<number> {
+  const { count, error } = await getClient()
+    .from("api_cache")
+    .select("cache_key", { count: "exact", head: true })
+    .in("source", ["ai-classify", "ai-insight"])
+    .gte("created_at", since.toISOString())
+    .abortSignal(AbortSignal.timeout(CACHE_TIMEOUT_MS));
+  if (error) throw error;
+  return count ?? 0;
+}
