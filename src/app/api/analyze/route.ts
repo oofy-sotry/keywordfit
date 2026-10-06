@@ -20,5 +20,5 @@ export async function GET(request: NextRequest) {
     cached: false,
   }));
 
-  return Response.json({ hs: query.data.hs, imports });
+  return Response.json({ ok: true, hs: query.data.hs, imports });
 }
