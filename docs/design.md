@@ -158,23 +158,22 @@
 
 ### `GET /api/analyze?category={code}&hs={code}`
 
-```ts
-type Section<T> = { ok: true; data: T; cached: boolean; asOf: string } | { ok: false; error: ErrorCode };
+- `category`(KOSIS 상품군 코드)와 `hs`(6·10자리, `8518.30` 같은 표기 허용) 중 **하나 이상** 필요, 둘 다 없거나 형식 오류면 400 `INVALID_INPUT`
+- 요청하지 않은 섹션은 `null`. 두 섹션은 `Promise.all`로 병렬 조회, 각자 `toSection`으로 실패 격리
 
-type AnalyzeResponse = {
-  market: Section<{
-    series: { period: string; amount: number }[];   // 24개월, 백만원
-    latest: number;
-    yoy: number | null;                              // 최근 3개월 합 vs 전년 동기
-    mobileShare?: number;
-  }>;
-  imports: Section<{
-    series: { period: string; usd: number; kg: number; unitPrice: number | null }[];
-    yoy: number | null;                              // 최근 12개월 vs 직전 12개월
-    topCountries: { name: string; share: number }[]; // 상위 5
-  }>;
-  opportunity: Section<Opportunity>;                 // market·imports 둘 다 ok일 때만
-};
+```ts
+type Section<T> = { ok: true; data: T; cached: boolean } | { ok: false; error: ErrorCode };
+
+type AnalyzeResponse =
+  | {
+      ok: true;
+      hs: string | null;
+      category: string | null;
+      market: Section<MarketSummary> | null;   // series(24개월, 백만원) · latest · yoy(최근 3개월 vs 전년 동기) · asOf
+      imports: Section<ImportSummary> | null;  // series(24개월 usd·kg·unitPrice) · yoy(12 vs 12개월) · topCountries(상위 5+기타) · asOf
+      // D5: opportunity: Section<Opportunity> | null  — market·imports 둘 다 ok일 때만
+    }
+  | { ok: false; error: "INVALID_INPUT" };
 ```
 
 ### `POST /api/insight`
@@ -293,6 +292,8 @@ alter table api_cache enable row level security;  -- 정책 없음 = anon 차단
 | `ai-insight` | 해시 | 7d | 무료 한도 절약 |
 
 - `getOrFetch(key, source, ttl, fetcher)` 하나로 통일, upsert 저장. 만료 행은 조회 시 `expires_at > now()`로 무시.
+  - 구현: `cache.ts` `createCache(store)`(저장소 주입 → 가짜 저장소로 테스트) + `supabase.ts`의 `supabaseCacheStore`·`getOrFetch` (캐시 읽기·쓰기 각 1.5초 제한)
+  - 캐시 키 (실제): `customs:{hs}:{start}-{end}`, `kosis:{category}:25`
 
 ---
 
@@ -365,7 +366,9 @@ keywordfit/
    │  ├─ ClassificationPicker.tsx
    │  ├─ SummaryCards.tsx
    │  ├─ MarketChart.tsx
-   │  ├─ ImportExplorer.tsx      # D2 임시 진입점 (HS 직접 입력), D4에서 분류 흐름으로 교체
+   │  ├─ AnalyzeExplorer.tsx     # 입력·상태·결과 조립 (D4에서 상품명 분류 흐름으로 교체)
+   │  ├─ ui.tsx                  # Card, ErrorBox, SectionBlock, SectionSkeleton
+   │  ├─ MarketSection.tsx / ImportSection.tsx
    │  ├─ chartTheme.tsx          # 차트 공통 축·격자·툴팁·프레임
    │  ├─ ImportChart.tsx
    │  ├─ UnitPriceChart.tsx
@@ -376,17 +379,22 @@ keywordfit/
       ├─ env.ts                  # zod 환경변수 검증
       ├─ errors.ts               # ErrorCode, UpstreamError
       ├─ http.ts                 # fetch + 타임아웃 + 에러 매핑
-      ├─ cache.ts / supabase.ts
+      ├─ cache.ts                # createCache (저장소 주입, 순수 로직)
+      ├─ supabase.ts             # supabaseCacheStore, getOrFetch (서버 전용)
+      ├─ section.ts              # Section 타입, toSection
+      ├─ format.ts               # 월·달러·원·증감률 표시
       ├─ period.ts               # 월 범위 계산 (순수)
       ├─ metrics.ts              # yoy, unitPrice, shares (순수)
       ├─ opportunity.ts          # classifyOpportunity (순수)
       ├─ kosis/
       │  ├─ categories.ts        # 상품군 코드 목록
       │  ├─ parse.ts             # parseStatValue, 응답 정규화 (순수)
-      │  └─ onlineShopping.ts
+      │  ├─ onlineShopping.ts
+      │  └─ market.ts            # getMarketSummary (캐시 적용)
       ├─ customs/
       │  ├─ parse.ts             # XML → 정규화 (순수)
-      │  └─ trade.ts
+      │  ├─ trade.ts
+      │  └─ imports.ts           # getImportSummary (캐시 적용)
       ├─ hs/code.ts              # HS코드 형식 규칙 (클라이언트·서버 공용)
       ├─ hs/hsCodes.ts           # 존재 확인, 품명 검색
       └─ ai/
