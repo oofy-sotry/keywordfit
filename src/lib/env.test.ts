@@ -16,6 +16,7 @@ describe("parseEnv", () => {
     expect(env.GEMINI_MODEL).toBe("gemini-flash-lite-latest");
     expect(env.GEMINI_FALLBACK_MODEL).toBe("gemini-flash-latest");
     expect(env.AI_DAILY_LIMIT).toBe(100);
+    expect(env.AI_PER_CLIENT_DAILY_LIMIT).toBe(20);
   });
 
   it("AI_DAILY_LIMIT 문자열을 숫자로 변환한다", () => {
