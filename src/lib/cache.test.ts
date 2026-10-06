@@ -18,9 +18,9 @@ function memoryStore(): CacheStore & { rows: Map<string, { payload: unknown; exp
   };
 }
 
-function setup(store: CacheStore) {
+function setup(store: CacheStore, version = "v1") {
   vi.spyOn(console, "error").mockImplementation(() => {});
-  return createCache(store, () => NOW);
+  return createCache(store, { version, now: () => NOW });
 }
 
 describe("getOrFetch", () => {
@@ -29,7 +29,7 @@ describe("getOrFetch", () => {
     const fetcher = vi.fn().mockResolvedValue({ v: 1 });
     const result = await setup(store).getOrFetch("k", "kosis", 3600, fetcher);
     expect(result).toEqual({ data: { v: 1 }, cached: false });
-    expect(store.rows.get("k")?.expiresAt).toEqual(new Date("2026-10-06T01:00:00Z"));
+    expect(store.rows.get("v1:k")?.expiresAt).toEqual(new Date("2026-10-06T01:00:00Z"));
   });
 
   it("캐시에 있으면 조회하지 않고 cached=true", async () => {
@@ -43,7 +43,7 @@ describe("getOrFetch", () => {
 
   it("만료된 캐시는 없는 것으로 본다", async () => {
     const store = memoryStore();
-    store.rows.set("k", { payload: { v: "old" }, expiresAt: new Date("2026-10-05T00:00:00Z") });
+    store.rows.set("v1:k", { payload: { v: "old" }, expiresAt: new Date("2026-10-05T00:00:00Z") });
     const result = await setup(store).getOrFetch("k", "kosis", 60, async () => ({ v: "new" }));
     expect(result).toEqual({ data: { v: "new" }, cached: false });
   });
@@ -69,5 +69,13 @@ describe("getOrFetch", () => {
     const failing = () => Promise.reject(new UpstreamError("UPSTREAM_ERROR", "x"));
     await expect(setup(store).getOrFetch("k", "kosis", 60, failing)).rejects.toBeInstanceOf(UpstreamError);
     expect(store.rows.size).toBe(0);
+  });
+
+  it("버전이 다르면 이전 형태의 캐시를 쓰지 않는다 (요약 형태 변경 대비)", async () => {
+    const store = memoryStore();
+    await setup(store, "v1").getOrFetch("k", "kosis", 3600, async () => ({ old: true }));
+    const result = await setup(store, "v2").getOrFetch("k", "kosis", 3600, async () => ({ fresh: true }));
+    expect(result).toEqual({ data: { fresh: true }, cached: false });
+    expect([...store.rows.keys()].sort()).toEqual(["v1:k", "v2:k"]);
   });
 });
