@@ -117,8 +117,12 @@ describe("buildInsightPrompt", () => {
     expect(buildInsightPrompt(input).system).toContain("이 품목");
   });
 
-  it("코멘트용 버전 (v5: 수입 품목은 '이 품목')", () => {
-    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v5");
+  it("순위는 말로 쓰라고 지시한다 ('1위' 대신 자리표시자를 넣어 '미국위'가 된 사례)", () => {
+    expect(buildInsightPrompt(input).system).toContain("가장 큰");
+  });
+
+  it("코멘트용 버전 (v6: 순위 표현)", () => {
+    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v6");
   });
 });
 
