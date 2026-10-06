@@ -265,7 +265,9 @@ type AnalyzeResponse =
 
 - 입력: 상품군 이름, HS 품명, **지표 키-값 표** (`marketYoY`, `importYoY`, `topCountry`, `topCountryShare`, `unitPriceYoY`, `opportunity` …)
 - 규칙: **문장에 숫자를 직접 쓰지 말고 `{{marketYoY}}` 같은 자리표시자만 쓴다.** 3~4개 포인트.
-- 출력 스키마: `{ points: { text: string; metrics: string[] }[] }` — 근거 지표는 AI가 적은 `metrics`가 아니라 **문장에 실제로 쓴 자리표시자**로 판정
+- 출력 스키마: `{ points: { text: string }[] }` — 근거 지표는 **문장에 실제로 쓴 자리표시자**로 판정 (v1의 `metrics` 필드는 빠뜨리면 전체 실패라 v2에서 제거)
+- **캐시에는 자리표시자가 남은 문장 틀만 저장, 값은 매 요청 `fillInsight`로 지금 데이터에서 채움** → 같은 기준월에 KOSIS가 수치를 고쳐도 문장 속 수치와 근거 칩이 항상 일치
+- AI에게 주는 지표 설명은 숫자 없이("최근 석 달", "최근 한 해") — 설명을 옮겨 써도 숫자 규칙에 걸리지 않게. 화면 칩 이름은 숫자 포함
 - 지표 키(실제): `marketYoy`, `marketLatest`, `importYoy`, `importRecent12`, `topCountry`, `topCountryShare`, `unitPrice`, `opportunity` (`ai/insightMetrics.ts`, 값은 우리 데이터를 표시 형식으로)
 - 서버 검증 `validateInsight()` (순수 함수 → 테스트)
   | 검증 | 처리 |
@@ -388,6 +390,7 @@ keywordfit/
    │  ├─ AnalyzeExplorer.tsx     # 상품명 입력 → 분류 → 분석, 상태·결과 조립
    │  ├─ ManualQueryForm.tsx     # 상품군·HS코드 직접 지정
    │  ├─ ui.tsx                  # Card, ErrorBox, SectionBlock, SectionSkeleton
+   │  ├─ AnalysisResults.tsx     # 결과 조립: 진입 판단(또는 판단 불가 안내) → 시장 → 수입 → AI 코멘트
    │  ├─ MarketSection.tsx / ImportSection.tsx
    │  ├─ chartTheme.tsx          # 차트 공통 축·격자·툴팁·프레임
    │  ├─ ImportChart.tsx
