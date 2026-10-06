@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import { ClassificationPicker } from "@/components/ClassificationPicker";
 import { ImportSection } from "@/components/ImportSection";
 import { MarketSection } from "@/components/MarketSection";
 import { ErrorBox, SectionSkeleton } from "@/components/ui";
+import type { ProductClassification } from "@/lib/ai/classify";
 import type { ErrorCode } from "@/lib/errors";
 import { isHsCode, normalizeHsInput } from "@/lib/hs/code";
 import { isMarketCategory, MARKET_CATEGORIES, type MarketCategoryCode } from "@/lib/kosis/categories";
@@ -18,49 +20,54 @@ type AnalyzeResult = {
   imports: Section<ImportSummary> | null;
 };
 type AnalyzeResponse = AnalyzeResult | { ok: false; error: ErrorCode };
+type ClassifyResponse =
+  | { ok: true; product: string; data: ProductClassification; cached: boolean }
+  | { ok: false; error: ErrorCode };
 
 type Query = { category: MarketCategoryCode | ""; hs: string };
 
-// D4에서 상품명 → 상품군·HS코드 분류(F1)로 대체. 지금은 직접 선택 + 예시.
-const EXAMPLES: { label: string; category: MarketCategoryCode; hs: string }[] = [
-  { label: "무선 이어폰", category: "0021", hs: "851830" },
-  { label: "완구", category: "011", hs: "950300" },
-  { label: "기초화장품", category: "010", hs: "330499" },
-];
+const EXAMPLES = ["무선 블루투스 이어폰", "강아지 사료", "레고 블록"];
 
-type State =
+type ClassifyState =
+  | { status: "idle" }
+  | { status: "loading"; product: string }
+  | { status: "done"; product: string; result: ProductClassification };
+
+type AnalyzeState =
   | { status: "idle" }
   | { status: "loading"; query: Query }
   | { status: "error"; error: ErrorCode; message?: string }
   | { status: "done"; result: AnalyzeResult };
 
 export function AnalyzeExplorer() {
+  const [product, setProduct] = useState("");
   const [category, setCategory] = useState<MarketCategoryCode | "">("");
   const [hs, setHs] = useState("");
-  const [state, setState] = useState<State>({ status: "idle" });
-  // 마지막 요청 번호. 늦게 도착한 이전 응답이 최신 결과를 덮어쓰지 않게 한다.
+  const [classify, setClassify] = useState<ClassifyState>({ status: "idle" });
+  const [analysis, setAnalysis] = useState<AnalyzeState>({ status: "idle" });
+  // 마지막 요청 번호 (분류·분석 공용). 늦게 도착한 이전 응답이 최신 결과를 덮어쓰지 않게 한다.
   const latestRequest = useRef(0);
-  const loading = state.status === "loading";
+  const busy = classify.status === "loading" || analysis.status === "loading";
 
   async function analyze(query: Query) {
     setCategory(query.category);
     setHs(query.hs);
     if (!query.category && !query.hs) {
-      setState({ status: "error", error: "INVALID_INPUT", message: "상품군이나 HS코드 중 하나 이상 입력해 주세요" });
+      setAnalysis({ status: "error", error: "INVALID_INPUT", message: "상품군이나 HS코드 중 하나 이상 입력해 주세요" });
       return;
     }
     if (query.hs && !isHsCode(query.hs)) {
-      setState({ status: "error", error: "INVALID_INPUT", message: "HS코드는 숫자 6자리 또는 10자리예요 (예: 851830)" });
+      setAnalysis({ status: "error", error: "INVALID_INPUT", message: "HS코드는 숫자 6자리 또는 10자리예요 (예: 851830)" });
       return;
     }
     const requestId = ++latestRequest.current;
-    setState({ status: "loading", query });
+    setAnalysis({ status: "loading", query });
 
     const params = new URLSearchParams();
     if (query.category) params.set("category", query.category);
     if (query.hs) params.set("hs", query.hs);
 
-    let next: State;
+    let next: AnalyzeState;
     try {
       const response = await fetch(`/api/analyze?${params}`);
       const body: AnalyzeResponse = await response.json();
@@ -68,75 +75,165 @@ export function AnalyzeExplorer() {
     } catch {
       next = { status: "error", error: "UPSTREAM_ERROR" };
     }
-    if (requestId === latestRequest.current) setState(next);
+    if (requestId === latestRequest.current) setAnalysis(next);
+  }
+
+  /** 상품명 → 분류 → 1순위 후보로 바로 분석 */
+  async function classifyAndAnalyze(name: string) {
+    const trimmed = name.trim();
+    setProduct(name);
+    if (!trimmed) {
+      setAnalysis({ status: "error", error: "INVALID_INPUT", message: "팔려는 상품명을 입력해 주세요" });
+      return;
+    }
+    const requestId = ++latestRequest.current;
+    setClassify({ status: "loading", product: trimmed });
+    setAnalysis({ status: "idle" });
+
+    let body: ClassifyResponse;
+    try {
+      const response = await fetch("/api/classify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ product: trimmed }),
+      });
+      body = await response.json();
+    } catch {
+      body = { ok: false, error: "UPSTREAM_ERROR" };
+    }
+    if (requestId !== latestRequest.current) return;
+
+    if (!body.ok) {
+      setClassify({ status: "idle" });
+      setAnalysis({ status: "error", error: body.error });
+      return;
+    }
+    setClassify({ status: "done", product: body.product, result: body.data });
+    const first = body.data.hsCandidates[0]?.code ?? "";
+    const suggested = body.data.category?.code ?? "";
+    const query = { category: isMarketCategory(suggested) ? suggested : "", hs: first } as const;
+    if (query.category || query.hs) {
+      analyze(query);
+    } else {
+      setCategory("");
+      setHs("");
+    }
   }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
+    classifyAndAnalyze(product);
+  }
+
+  function onManualSubmit(event: FormEvent) {
+    event.preventDefault();
+    setClassify({ status: "idle" });
     analyze({ category, hs: normalizeHsInput(hs) });
   }
 
   return (
     <div className="flex flex-col gap-8">
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            상품군 (온라인 시장)
-            <select
-              value={category}
-              onChange={(e) => setCategory(isMarketCategory(e.target.value) ? e.target.value : "")}
-              className="rounded-lg border border-border bg-surface px-3 py-2 font-normal outline-none focus:border-series-1"
-            >
-              <option value="">선택 안 함</option>
-              {MARKET_CATEGORIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+      <div className="flex flex-col gap-3">
+        <form onSubmit={onSubmit} className="flex flex-col gap-3">
+          <label htmlFor="product" className="text-sm font-medium">
+            팔려는 상품
           </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            HS코드 (수입 동향, 6·10자리)
+          <div className="flex gap-2">
             <input
-              value={hs}
-              onChange={(e) => setHs(e.target.value)}
-              inputMode="numeric"
-              placeholder="예: 851830"
-              className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 font-normal outline-none focus:border-series-1"
+              id="product"
+              value={product}
+              onChange={(e) => setProduct(e.target.value)}
+              maxLength={40}
+              placeholder="예: 무선 블루투스 이어폰"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 outline-none focus:border-series-1"
             />
-          </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-foreground px-4 py-2 font-medium text-background disabled:opacity-50"
-          >
-            분석
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted">예시</span>
-          {EXAMPLES.map((example) => (
             <button
-              key={example.label}
-              type="button"
-              onClick={() => analyze({ category: example.category, hs: example.hs })}
-              disabled={loading}
-              className="rounded-full border border-border px-3 py-1 text-secondary hover:border-series-1 disabled:opacity-50"
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-foreground px-4 py-2 font-medium text-background disabled:opacity-50"
             >
-              {example.label}
+              분석
             </button>
-          ))}
-        </div>
-      </form>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted">예시</span>
+            {EXAMPLES.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => classifyAndAnalyze(example)}
+                disabled={busy}
+                className="rounded-full border border-border px-3 py-1 text-secondary hover:border-series-1 disabled:opacity-50"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </form>
 
-      {state.status === "loading" && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-secondary">상품군·HS코드 직접 지정</summary>
+          <form onSubmit={onManualSubmit} className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+            <label className="flex flex-col gap-1 font-medium">
+              상품군
+              <select
+                value={category}
+                onChange={(e) => setCategory(isMarketCategory(e.target.value) ? e.target.value : "")}
+                className="rounded-lg border border-border bg-surface px-3 py-2 font-normal outline-none focus:border-series-1"
+              >
+                <option value="">선택 안 함</option>
+                {MARKET_CATEGORIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 font-medium">
+              HS코드 (6·10자리)
+              <input
+                value={hs}
+                onChange={(e) => setHs(e.target.value)}
+                inputMode="numeric"
+                placeholder="예: 851830"
+                className="min-w-0 rounded-lg border border-border bg-surface px-3 py-2 font-normal outline-none focus:border-series-1"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg border border-border px-4 py-2 font-medium disabled:opacity-50"
+            >
+              조회
+            </button>
+          </form>
+        </details>
+      </div>
+
+      {classify.status === "loading" && (
+        <p className="animate-pulse text-sm text-muted" aria-busy="true">
+          “{classify.product}” 분류 중…
+        </p>
+      )}
+      {classify.status === "done" && (
+        <ClassificationPicker
+          product={classify.product}
+          result={classify.result}
+          category={category}
+          hs={hs}
+          disabled={busy}
+          onChange={analyze}
+        />
+      )}
+
+      {analysis.status === "loading" && (
         <>
-          {state.query.category && <SectionSkeleton cards={3} charts={1} />}
-          {state.query.hs && <SectionSkeleton cards={4} charts={2} />}
+          {analysis.query.category && <SectionSkeleton cards={3} charts={1} />}
+          {analysis.query.hs && <SectionSkeleton cards={4} charts={2} />}
         </>
       )}
-      {state.status === "error" && <ErrorBox code={state.error} message={state.message} />}
-      {state.status === "done" && <Results result={state.result} />}
+      {analysis.status === "error" && <ErrorBox code={analysis.error} message={analysis.message} />}
+      {analysis.status === "done" && <Results result={analysis.result} />}
     </div>
   );
 }
