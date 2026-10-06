@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TradeRow } from "@/lib/customs/parse";
-import { calcUnitPrice, calcYoy, sumImportsByMonth, topImportShares } from "./metrics";
+import { listMonths } from "@/lib/period";
+import { calcUnitPrice, calcYoy, sumImportsByMonth, summarizeImports, topImportShares } from "./metrics";
 
 function row(month: string, countryName: string, importUsd: number, importKg: number): TradeRow {
   return {
@@ -83,5 +84,43 @@ describe("topImportShares", () => {
 
   it("수입액 합이 0이면 빈 배열", () => {
     expect(topImportShares([row("202608", "중국", 0, 0)], 5)).toEqual([]);
+  });
+});
+
+describe("summarizeImports", () => {
+  // 202408~202609 요청 (26개월). 202609는 미공표라 행 없음 → 202408~202608 = 25개월
+  const months = listMonths("202408", "202609");
+  const rows = listMonths("202408", "202608").flatMap((month) => [
+    row(month, "중국", month >= "202509" ? 120 : 100, 10),
+    row(month, "베트남", 20, 2),
+  ]);
+
+  it("미공표 달을 잘라내고 최근 24개월만 남긴다", () => {
+    const summary = summarizeImports(rows, months)!;
+    expect(summary.series).toHaveLength(24);
+    expect(summary.series[0].month).toBe("202409");
+    expect(summary.asOf).toBe("202608");
+  });
+
+  it("최근 12개월 합 vs 직전 12개월 합으로 증감률을 낸다", () => {
+    // 최근 12개월 140×12, 직전 12개월 120×12 → +16.7%
+    expect(summarizeImports(rows, months)!.yoy).toBe(16.7);
+  });
+
+  it("수입국 점유율은 최근 12개월 기준", () => {
+    expect(summarizeImports(rows, months)!.topCountries).toEqual([
+      { name: "중국", share: 85.7 },
+      { name: "베트남", share: 14.3 },
+    ]);
+  });
+
+  it("24개월이 안 되면 증감률은 null", () => {
+    const short = summarizeImports(rows, listMonths("202601", "202609"))!;
+    expect(short.series).toHaveLength(8);
+    expect(short.yoy).toBeNull();
+  });
+
+  it("행이 하나도 없으면 null", () => {
+    expect(summarizeImports([], months)).toBeNull();
   });
 });
