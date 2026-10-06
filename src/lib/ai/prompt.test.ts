@@ -113,8 +113,12 @@ describe("buildInsightPrompt", () => {
     expect(buildInsightPrompt(input).system).toContain("상품군 이름");
   });
 
-  it("코멘트용 버전 (v4: 짧은 품목명·시장 이름)", () => {
-    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v4");
+  it("수입 품목은 공식 명칭 대신 '이 품목'으로 부르게 한다 (상위 분류명·긴 나열형 명칭을 쓴 사례)", () => {
+    expect(buildInsightPrompt(input).system).toContain("이 품목");
+  });
+
+  it("코멘트용 버전 (v5: 수입 품목은 '이 품목')", () => {
+    expect(INSIGHT_PROMPT_VERSION).toBe("insight-v5");
   });
 });
 
