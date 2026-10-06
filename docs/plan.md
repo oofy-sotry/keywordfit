@@ -15,17 +15,17 @@
 
 > 발급 절차: [api-keys.md](./api-keys.md) — 시작 전에 먼저 읽기
 
-- [ ] (가장 먼저) 공공데이터포털 회원가입 → 관세청 API 활용신청 (활성화 1~2시간 대기 → 그동안 나머지 진행)
-- [ ] KOSIS 회원가입 → OpenAPI 활용신청 → 인증키
-- [ ] KOSIS 온라인쇼핑동향 표에서 "OpenAPI URL 생성" → 표 ID·항목·분류 코드 확정
-- [ ] 공공데이터포털에서 "관세청_HS부호" XLSX 다운로드
-- [ ] Google AI Studio에서 Gemini 키 발급 (무료, 결제 설정 안 함)
-- [ ] Supabase Free 프로젝트 생성 (Seoul), `api_cache` 테이블
-- [ ] Next.js(App Router, TS, Tailwind) 셋업, Vitest 설치, git init
-- [ ] `.gitignore`에 `.env*` + `!.env.example` → 첫 커밋 전 `git status`로 키 파일 없는지 확인
-- [ ] `.env.example`, `src/lib/env.ts`(zod)
-- [ ] **KOSIS·관세청·Gemini를 curl로 한 번씩 호출** → design.md §3 필드명·코드 확정
-- [ ] GitHub → Vercel 연결, 환경변수 등록, 함수 리전 `icn1`
+- [x] (가장 먼저) 공공데이터포털 회원가입 → 관세청 API 활용신청 (품목별 + 품목별 국가별 2종)
+- [x] KOSIS 회원가입 → OpenAPI 활용신청 → 인증키
+- [x] KOSIS 온라인쇼핑동향 표 확정: `DT_1KE10041`, `itmId=T20`, `objL1=ALL`, `objL2=00`
+- [x] 공공데이터포털에서 "관세청_HS부호" + "HS부호 단위별 품목명" XLSX 다운로드 → `data/raw/`
+- [x] Google AI Studio에서 Gemini 키 발급 (무료, 결제 설정 안 함)
+- [ ] Supabase Free 프로젝트 생성 (Seoul) ✅, `api_cache` 테이블 ❌ (DB 비밀번호 인증 실패 — 2026-10-06)
+- [x] Next.js 16.3.8(App Router, TS, Tailwind) 셋업, Vitest 설치, git init
+- [x] `.gitignore`에 `.env*` + `!.env.example` → 첫 커밋 전 `git status`로 키 파일 없는지 확인
+- [x] `.env.example`, `src/lib/env.ts`(zod) + 테스트 6개
+- [x] **KOSIS·관세청·Gemini를 curl로 한 번씩 호출** → design.md §3 필드명·코드 확정
+- [x] GitHub(oofy-sotry/keywordfit) → Vercel 연결, 환경변수 등록, 함수 리전 `icn1` → https://keywordfit-blue.vercel.app
 
 **완료 기준:** Vercel URL에서 페이지 표시, curl로 세 API 모두 정상 응답, §3 확정.
 
