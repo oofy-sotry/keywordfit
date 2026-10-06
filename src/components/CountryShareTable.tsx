@@ -18,9 +18,9 @@ export function CountryShareTable({ shares }: { shares: CountryShare[] }) {
               <td className="w-24 py-2 pr-3">{country.name}</td>
               <td className="py-2">
                 <div className="flex items-center gap-3">
-                  <div className="h-2 flex-1 rounded-full bg-[var(--grid)]">
+                  <div className="h-2 flex-1 rounded-full bg-grid">
                     <div
-                      className={`h-2 rounded-full ${country.name === "기타" ? "bg-[var(--text-muted)]" : "bg-series-1"}`}
+                      className={`h-2 rounded-full ${country.name === "기타" ? "bg-muted" : "bg-series-1"}`}
                       style={{ width: `${country.share}%` }}
                     />
                   </div>
