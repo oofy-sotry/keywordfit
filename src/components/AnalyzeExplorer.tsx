@@ -1,29 +1,15 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import { AnalysisResults, type AnalyzeResult } from "@/components/AnalysisResults";
 import { ClassificationPicker } from "@/components/ClassificationPicker";
-import { ImportSection } from "@/components/ImportSection";
-import { InsightPanel } from "@/components/InsightPanel";
 import { ManualQueryForm } from "@/components/ManualQueryForm";
-import { MarketSection } from "@/components/MarketSection";
-import { OpportunityBadge } from "@/components/OpportunityBadge";
 import { ErrorBox, SectionSkeleton } from "@/components/ui";
 import type { ProductClassification } from "@/lib/ai/classify";
 import type { ErrorCode } from "@/lib/errors";
 import { isHsCode, normalizeHsInput } from "@/lib/hs/code";
 import { isMarketCategory, type MarketCategoryCode } from "@/lib/kosis/categories";
-import type { ImportSummary, MarketSummary } from "@/lib/metrics";
-import type { Opportunity } from "@/lib/opportunity";
-import type { Section } from "@/lib/section";
 
-type AnalyzeResult = {
-  ok: true;
-  hs: string | null;
-  category: MarketCategoryCode | null;
-  market: Section<MarketSummary> | null;
-  imports: Section<ImportSummary> | null;
-  opportunity: Section<Opportunity> | null;
-};
 type AnalyzeResponse = AnalyzeResult | { ok: false; error: ErrorCode };
 type ClassifyResponse =
   | { ok: true; product: string; data: ProductClassification; cached: boolean }
@@ -208,31 +194,7 @@ export function AnalyzeExplorer() {
         </>
       )}
       {analysis.status === "error" && <ErrorBox code={analysis.error} message={analysis.message} />}
-      {analysis.status === "done" && <Results result={analysis.result} />}
+      {analysis.status === "done" && <AnalysisResults result={analysis.result} />}
     </div>
-  );
-}
-
-function Results({ result }: { result: AnalyzeResult }) {
-  const bothOk = result.category && result.hs && result.market?.ok && result.imports?.ok;
-  return (
-    <>
-      {result.opportunity?.ok && <OpportunityBadge opportunity={result.opportunity.data} />}
-      {result.category &&
-        result.market &&
-        (result.market.ok ? (
-          <MarketSection category={result.category} summary={result.market.data} />
-        ) : (
-          <ErrorBox title="온라인 시장" code={result.market.error} />
-        ))}
-      {result.hs &&
-        result.imports &&
-        (result.imports.ok ? (
-          <ImportSection hs={result.hs} summary={result.imports.data} />
-        ) : (
-          <ErrorBox title="수입 동향" code={result.imports.error} />
-        ))}
-      {bothOk && <InsightPanel key={`${result.category}:${result.hs}`} category={result.category!} hs={result.hs!} />}
-    </>
   );
 }
