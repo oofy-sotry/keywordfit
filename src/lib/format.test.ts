@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatKrwMillion, formatMonth, formatShortMonth, formatSignedPercent, formatUsd } from "./format";
+import { formatKrwMillion, krwAxisFormatter, formatMonth, formatShortMonth, formatSignedPercent, formatUsd } from "./format";
 
 describe("formatMonth", () => {
   it("YYYYMM을 YYYY.MM으로", () => {
@@ -43,5 +43,21 @@ describe("formatKrwMillion", () => {
 
   it("null은 대시", () => {
     expect(formatKrwMillion(null)).toBe("—");
+  });
+});
+
+describe("krwAxisFormatter", () => {
+  it("축 최댓값 기준으로 한 단위를 고른다 — 조 단위", () => {
+    const fmt = krwAxisFormatter(1_800_000);
+    expect([0, 450_000, 900_000, 1_350_000, 1_800_000].map(fmt)).toEqual(["0", "0.45조원", "0.9조원", "1.35조원", "1.8조원"]);
+  });
+
+  it("억 단위", () => {
+    const fmt = krwAxisFormatter(268_495);
+    expect([100_000, 250_000].map(fmt)).toEqual(["1,000억원", "2,500억원"]);
+  });
+
+  it("만 단위", () => {
+    expect(krwAxisFormatter(50)(50)).toBe("5,000만원");
   });
 });
