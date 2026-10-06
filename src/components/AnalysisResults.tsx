@@ -23,7 +23,16 @@ export function AnalysisResults({ result }: { result: AnalyzeResult }) {
   const bothOk = result.category && result.hs && result.market?.ok && result.imports?.ok;
   return (
     <>
-      {result.opportunity?.ok && <OpportunityBadge opportunity={result.opportunity.data} />}
+      {result.opportunity &&
+        (result.opportunity.ok ? (
+          <OpportunityBadge opportunity={result.opportunity.data} />
+        ) : (
+          // 실패가 아니라 "판단 불가" — 오류 색 대신 안내 상자
+          <p className="rounded-xl border border-border bg-surface p-4 text-sm text-secondary">
+            진입 판단을 계산할 수 없어요. 시장과 수입 모두 전년 대비 비교 데이터가 있어야 해요 (수입 실적이 짧거나 한쪽
+            데이터를 불러오지 못한 경우).
+          </p>
+        ))}
       {result.category &&
         result.market &&
         (result.market.ok ? (
