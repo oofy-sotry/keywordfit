@@ -9,8 +9,8 @@ const { getImportSummary } = await import("@/lib/customs/imports");
 const { getMarketSummary } = await import("@/lib/kosis/market");
 const { GET } = await import("./route");
 
-const importSummary = { asOf: "202608" };
-const marketSummary = { asOf: "202608" };
+const importSummary = { asOf: "202608", yoy: 23 };
+const marketSummary = { asOf: "202608", yoy: 8.1 };
 
 async function call(query: string) {
   const response = await GET(new NextRequest(`http://localhost/api/analyze?${query}`));
@@ -52,5 +52,22 @@ describe("GET /api/analyze", () => {
     expect(status).toBe(200);
     expect(body.market).toEqual({ ok: false, error: "UPSTREAM_AUTH" });
     expect(body.imports).toEqual({ ok: true, data: importSummary, cached: false });
+  });
+
+  it("두 섹션이 모두 성공하면 진입 판단 섹션을 계산한다 (둘 다 캐시일 때만 cached)", async () => {
+    const { body } = await call("category=0021&hs=851830");
+    expect(body.opportunity).toMatchObject({ ok: true, cached: false, data: { grade: "growing", marketYoy: 8.1, importYoy: 23 } });
+  });
+
+  it("한쪽만 요청하면 진입 판단은 null", async () => {
+    expect((await call("category=0021")).body.opportunity).toBeNull();
+    expect((await call("hs=851830")).body.opportunity).toBeNull();
+  });
+
+  it("한쪽이 실패하거나 증감률이 없으면 진입 판단은 NO_DATA", async () => {
+    vi.mocked(getImportSummary).mockResolvedValue({ data: { asOf: "202608", yoy: null } as never, cached: true });
+    expect((await call("category=0021&hs=851830")).body.opportunity).toEqual({ ok: false, error: "NO_DATA" });
+    vi.mocked(getMarketSummary).mockRejectedValue(new UpstreamError("UPSTREAM_ERROR", "x"));
+    expect((await call("category=0021&hs=851830")).body.opportunity).toEqual({ ok: false, error: "NO_DATA" });
   });
 });
