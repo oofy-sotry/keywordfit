@@ -105,6 +105,12 @@ describe("validateInsight", () => {
     expect(result.warnings).toHaveLength(2);
   });
 
+  it("자리표시자를 순위 숫자 자리에 쓰면('{{topCountry}}위' → '미국위') 뺀다", () => {
+    const result = validateInsight({ points: [point("{{topCountry}}이 수입액 {{topCountry}}위를 차지해요.")] }, metrics);
+    expect(result.templates).toEqual([]);
+    expect(result.warnings[0]).toContain("순위");
+  });
+
   it("근거 지표가 하나도 없는 문장은 뺀다", () => {
     expect(validateInsight({ points: [point("좋은 시장이에요.")] }, metrics).templates).toEqual([]);
   });
