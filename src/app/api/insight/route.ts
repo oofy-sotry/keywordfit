@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getInsight } from "@/lib/ai/insight";
+import { clientKey } from "@/lib/clientKey";
 import { httpStatusOf, toErrorCode } from "@/lib/errors";
 import { HS_CODE_PATTERN, normalizeHsInput } from "@/lib/hs/code";
 import { isMarketCategory } from "@/lib/kosis/categories";
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "INVALID_INPUT" }, { status: 400 });
   }
   try {
-    const { data, cached } = await getInsight(body.data.category, body.data.hs);
+    const { data, cached } = await getInsight(body.data.category, body.data.hs, clientKey(request.headers));
     return Response.json({ ok: true, data, cached });
   } catch (error) {
     const code = toErrorCode(error);
