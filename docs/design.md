@@ -366,6 +366,7 @@ keywordfit/
    │  ├─ SummaryCards.tsx
    │  ├─ MarketChart.tsx
    │  ├─ ImportExplorer.tsx      # D2 임시 진입점 (HS 직접 입력), D4에서 분류 흐름으로 교체
+   │  ├─ chartTheme.tsx          # 차트 공통 축·격자·툴팁·프레임
    │  ├─ ImportChart.tsx
    │  ├─ UnitPriceChart.tsx
    │  ├─ CountryShareTable.tsx
@@ -386,6 +387,7 @@ keywordfit/
       ├─ customs/
       │  ├─ parse.ts             # XML → 정규화 (순수)
       │  └─ trade.ts
+      ├─ hs/code.ts              # HS코드 형식 규칙 (클라이언트·서버 공용)
       ├─ hs/hsCodes.ts           # 존재 확인, 품명 검색
       └─ ai/
          ├─ client.ts            # Gemini 호출 (교체 시 이 파일만)
