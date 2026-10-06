@@ -26,10 +26,10 @@ const deps = {
 };
 
 /** AI 분류 → 서버 검증 → 7일 캐시. 검증 후 후보가 없으면 실패로 보고 캐시하지 않는다. */
-async function classifyWithAi(product: string): Promise<Cached<ProductClassification>> {
+async function classifyWithAi(product: string, client: string): Promise<Cached<ProductClassification>> {
   const key = `ai-classify:${PROMPT_VERSION}:${getEnv().GEMINI_MODEL}:${normalizeProductKey(product)}`;
   return getOrFetch(key, "ai-classify", TTL_SECONDS, async () => {
-    await reserveAiCall();
+    await reserveAiCall({ client });
     const { data } = await generateJson({ ...buildClassifyPrompt(product, MARKET_CATEGORIES), schema: RawSchema });
     const result = validateClassification(data, deps);
     if (result.hsCandidates.length === 0) {
@@ -43,9 +43,9 @@ async function classifyWithAi(product: string): Promise<Cached<ProductClassifica
  * 상품명 → 상품군·HS 후보. AI가 실패하면(한도·장애·후보 없음) 품명 검색으로 대체한다.
  * 대체 결과는 캐시하지 않는다 — 다음 요청에서 AI를 다시 시도하도록.
  */
-export async function classifyProduct(product: string): Promise<Cached<ProductClassification>> {
+export async function classifyProduct(product: string, client = "unknown"): Promise<Cached<ProductClassification>> {
   try {
-    return await classifyWithAi(product);
+    return await classifyWithAi(product, client);
   } catch (error) {
     const code = toErrorCode(error);
     if (code !== "NO_DATA" && code !== "AI_LIMIT") console.error("[classify] AI 분류 실패, 품명 검색으로 대체", error);
