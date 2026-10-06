@@ -13,8 +13,8 @@ describe("parseEnv", () => {
   it("필수 키가 모두 있으면 기본값을 채워 반환한다", () => {
     const env = parseEnv(valid);
     expect(env.KOSIS_API_KEY).toBe("kosis-key");
-    expect(env.GEMINI_MODEL).toBe("gemini-flash-latest");
-    expect(env.GEMINI_FALLBACK_MODEL).toBe("gemini-flash-lite-latest");
+    expect(env.GEMINI_MODEL).toBe("gemini-flash-lite-latest");
+    expect(env.GEMINI_FALLBACK_MODEL).toBe("gemini-flash-latest");
     expect(env.AI_DAILY_LIMIT).toBe(100);
   });
 
