@@ -136,4 +136,19 @@ describe("fillInsight", () => {
     const partial = { marketYoy: "+6.0%", unitPrice: null } as InsightMetrics;
     expect(fillInsight(templates, partial).map((p) => p.text)).toEqual(["시장은 +6.0% 성장했어요."]);
   });
+
+  it("채운 값의 받침에 맞게 바로 뒤 조사를 고친다", () => {
+    const tpl = [
+      { text: "{{topCountry}}가 1위예요.".replace("1", "첫"), metrics: ["topCountry" as const] },
+      { text: "{{importRecent12}}를 기록했어요.", metrics: ["importRecent12" as const] },
+      { text: "{{topCountry}}에서 들어와요.", metrics: ["topCountry" as const] },
+    ];
+    const values = { topCountry: "미국", importRecent12: "$20.3억" } as InsightMetrics;
+    expect(fillInsight(tpl, values).map((p) => p.text)).toEqual([
+      "미국이 첫위예요.",
+      "$20.3억을 기록했어요.",
+      "미국에서 들어와요.",
+    ]);
+  });
 });
+
