@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# raw public data files (converted JSON is committed instead)
+/data/raw/
+
+# local-only notes (troubleshooting log etc.)
+/docs/local/
 
 # vercel
 .vercel
