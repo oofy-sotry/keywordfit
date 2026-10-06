@@ -1,4 +1,5 @@
 import type { Hs6 } from "@/lib/hs/hsCodes";
+import { fixParticle } from "@/lib/format";
 import { normalizeHsInput } from "@/lib/hs/code";
 import { isMetricKey, type InsightMetrics, type MetricKey } from "./insightMetrics";
 
@@ -66,6 +67,8 @@ export type InsightPoint = { text: string; metrics: MetricKey[] };
 
 const MAX_POINTS = 4;
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+// 자리표시자 바로 뒤 조사 (뒤에 한글이 이어지면 조사가 아니라 단어의 일부라 제외)
+const PLACEHOLDER_WITH_PARTICLE = /\{\{(\w+)\}\}(?:(으로|로|이|가|은|는|을|를|과|와)(?![가-힣]))?/g;
 
 /**
  * AI 코멘트를 그대로 믿지 않는다 (design.md §6.3).
@@ -113,7 +116,10 @@ export function fillInsight(templates: InsightTemplate[], metrics: InsightMetric
   return templates
     .filter((template) => template.metrics.every((key) => metrics[key] !== null))
     .map((template) => ({
-      text: template.text.replace(PLACEHOLDER, (_, key: MetricKey) => metrics[key]!),
+      text: template.text.replace(PLACEHOLDER_WITH_PARTICLE, (_, key: MetricKey, particle = "") => {
+        const value = metrics[key]!;
+        return value + (particle ? fixParticle(value, particle) : "");
+      }),
       metrics: template.metrics,
     }));
 }
