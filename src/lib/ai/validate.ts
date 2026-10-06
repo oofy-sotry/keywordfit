@@ -1,5 +1,6 @@
 import type { Hs6 } from "@/lib/hs/hsCodes";
 import { normalizeHsInput } from "@/lib/hs/code";
+import { isMetricKey, type InsightMetrics, type MetricKey } from "./insightMetrics";
 
 /** AI 분류 출력 (스키마 검증을 통과한 형태) */
 export type RawClassification = {
@@ -54,4 +55,50 @@ export function validateClassification(raw: RawClassification, deps: Deps): Clas
   }
 
   return { category, hsCandidates, warnings };
+}
+
+/** AI 코멘트 출력 (스키마 검증을 통과한 형태) */
+export type RawInsight = { points: { text: string; metrics: string[] }[] };
+
+export type InsightPoint = { text: string; metrics: MetricKey[] };
+
+const MAX_POINTS = 4;
+const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+
+/**
+ * AI 코멘트를 그대로 믿지 않는다 (design.md §6.3).
+ * 수치는 AI가 쓰지 않고 {{key}} 자리표시자로만 참조 → 서버가 우리 데이터 값으로 채운다.
+ * 자리표시자 밖에 숫자가 있으면 AI가 수치를 지어낸 것으로 보고 그 문장을 버린다.
+ */
+export function validateInsight(raw: RawInsight, metrics: InsightMetrics): { points: InsightPoint[]; warnings: string[] } {
+  const warnings: string[] = [];
+  const points: InsightPoint[] = [];
+  const seen = new Set<string>();
+
+  for (const { text } of raw.points) {
+    const keys = [...new Set([...text.matchAll(PLACEHOLDER)].map((m) => m[1]))];
+    if (keys.length === 0) {
+      warnings.push(`근거 지표 없는 문장 제외: ${text}`);
+      continue;
+    }
+    const unknown = keys.filter((key) => !isMetricKey(key));
+    if (unknown.length > 0) {
+      warnings.push(`모르는 지표 사용 제외: ${unknown.join(", ")}`);
+      continue;
+    }
+    const missing = (keys as MetricKey[]).filter((key) => metrics[key] === null);
+    if (missing.length > 0) {
+      warnings.push(`값이 없는 지표 사용 제외: ${missing.join(", ")}`);
+      continue;
+    }
+    if (/\d/.test(text.replace(PLACEHOLDER, ""))) {
+      warnings.push(`자리표시자 밖 숫자 제외: ${text}`);
+      continue;
+    }
+    const filled = text.replace(PLACEHOLDER, (_, key: MetricKey) => metrics[key]!).trim();
+    if (seen.has(filled) || points.length >= MAX_POINTS) continue;
+    seen.add(filled);
+    points.push({ text: filled, metrics: keys as MetricKey[] });
+  }
+  return { points, warnings };
 }
