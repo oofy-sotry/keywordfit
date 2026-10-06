@@ -33,6 +33,11 @@ describe("GET /api/analyze", () => {
     expect((await call("hs=85")).status).toBe(400);
   });
 
+  it("형식은 맞아도 코드표에 없는 HS코드는 400 (특수용도 999999 등)", async () => {
+    expect((await call("hs=999999")).status).toBe(400);
+    expect(getImportSummary).not.toHaveBeenCalled();
+  });
+
   it("상품군만 주면 시장 섹션만 조회하고 수입 섹션은 null", async () => {
     const { status, body } = await call("category=0021");
     expect(status).toBe(200);

@@ -25,7 +25,13 @@ beforeEach(() => {
 
 describe("POST /api/insight", () => {
   it("상품군·HS코드가 둘 다 있어야 한다", async () => {
-    for (const body of [{ category: "0021" }, { hs: "851830" }, { category: "999", hs: "851830" }, { category: "0021", hs: "85" }]) {
+    for (const body of [
+      { category: "0021" },
+      { hs: "851830" },
+      { category: "999", hs: "851830" },
+      { category: "0021", hs: "85" },
+      { category: "0021", hs: "999999" }, // 코드표에 없음
+    ]) {
       expect((await post(body)).status).toBe(400);
     }
     expect(getInsight).not.toHaveBeenCalled();
