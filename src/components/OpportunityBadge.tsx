@@ -31,8 +31,8 @@ export function OpportunityBadge({ opportunity }: { opportunity: Opportunity }) 
         <p className="text-sm text-secondary">{opportunity.description}</p>
         <p className="mt-1 text-xs text-muted">
           시장 성장률 {formatSignedPercent(opportunity.marketYoy)} (기준 {MARKET_GROWTH_THRESHOLD}% 이상이면 성장) · 수입
-          증가율 {formatSignedPercent(opportunity.importYoy)} (기준 {IMPORT_GROWTH_THRESHOLD}% 이상이면 증가) — 시장은
-          상품군 전체 최근 3개월, 수입은 해당 품목 최근 12개월 기준
+          증가율 {formatSignedPercent(opportunity.importYoy)} (기준 {IMPORT_GROWTH_THRESHOLD}% 이상이면 증가) — 둘 다 최근
+          12개월 전년 대비, 시장은 상품군 전체·수입은 해당 품목 기준
         </p>
       </div>
     </section>
