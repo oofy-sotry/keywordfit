@@ -57,9 +57,11 @@ export function validateClassification(raw: RawClassification, deps: Deps): Clas
   return { category, hsCandidates, warnings };
 }
 
-/** AI 코멘트 출력 (스키마 검증을 통과한 형태) */
-export type RawInsight = { points: { text: string; metrics: string[] }[] };
+/** AI 코멘트 출력 (스키마 검증을 통과한 형태). 근거 판정은 문장 속 자리표시자로 하므로 별도 metrics 필드는 받지 않는다. */
+export type RawInsight = { points: { text: string }[] };
 
+/** 자리표시자가 남은 문장 틀 — 이 형태로 캐시하고, 값은 요청할 때마다 채운다. */
+export type InsightTemplate = { text: string; metrics: MetricKey[] };
 export type InsightPoint = { text: string; metrics: MetricKey[] };
 
 const MAX_POINTS = 4;
@@ -70,12 +72,16 @@ const PLACEHOLDER = /\{\{(\w+)\}\}/g;
  * 수치는 AI가 쓰지 않고 {{key}} 자리표시자로만 참조 → 서버가 우리 데이터 값으로 채운다.
  * 자리표시자 밖에 숫자가 있으면 AI가 수치를 지어낸 것으로 보고 그 문장을 버린다.
  */
-export function validateInsight(raw: RawInsight, metrics: InsightMetrics): { points: InsightPoint[]; warnings: string[] } {
+export function validateInsight(
+  raw: RawInsight,
+  metrics: InsightMetrics,
+): { templates: InsightTemplate[]; warnings: string[] } {
   const warnings: string[] = [];
-  const points: InsightPoint[] = [];
+  const templates: InsightTemplate[] = [];
   const seen = new Set<string>();
 
-  for (const { text } of raw.points) {
+  for (const { text: rawText } of raw.points) {
+    const text = rawText.trim();
     const keys = [...new Set([...text.matchAll(PLACEHOLDER)].map((m) => m[1]))];
     if (keys.length === 0) {
       warnings.push(`근거 지표 없는 문장 제외: ${text}`);
@@ -95,10 +101,19 @@ export function validateInsight(raw: RawInsight, metrics: InsightMetrics): { poi
       warnings.push(`자리표시자 밖 숫자 제외: ${text}`);
       continue;
     }
-    const filled = text.replace(PLACEHOLDER, (_, key: MetricKey) => metrics[key]!).trim();
-    if (seen.has(filled) || points.length >= MAX_POINTS) continue;
-    seen.add(filled);
-    points.push({ text: filled, metrics: keys as MetricKey[] });
+    if (seen.has(text) || templates.length >= MAX_POINTS) continue;
+    seen.add(text);
+    templates.push({ text, metrics: keys as MetricKey[] });
   }
-  return { points, warnings };
+  return { templates, warnings };
+}
+
+/** 문장 틀을 지금의 우리 데이터로 채운다. 그사이 값이 없어진 지표를 쓰는 문장은 뺀다. */
+export function fillInsight(templates: InsightTemplate[], metrics: InsightMetrics): InsightPoint[] {
+  return templates
+    .filter((template) => template.metrics.every((key) => metrics[key] !== null))
+    .map((template) => ({
+      text: template.text.replace(PLACEHOLDER, (_, key: MetricKey) => metrics[key]!),
+      metrics: template.metrics,
+    }));
 }
