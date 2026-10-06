@@ -31,7 +31,7 @@ const EXAMPLES: { label: string; category: MarketCategoryCode; hs: string }[] = 
 type State =
   | { status: "idle" }
   | { status: "loading"; query: Query }
-  | { status: "error"; error: ErrorCode }
+  | { status: "error"; error: ErrorCode; message?: string }
   | { status: "done"; result: AnalyzeResult };
 
 export function AnalyzeExplorer() {
@@ -45,8 +45,12 @@ export function AnalyzeExplorer() {
   async function analyze(query: Query) {
     setCategory(query.category);
     setHs(query.hs);
-    if ((!query.category && !query.hs) || (query.hs && !isHsCode(query.hs))) {
-      setState({ status: "error", error: "INVALID_INPUT" });
+    if (!query.category && !query.hs) {
+      setState({ status: "error", error: "INVALID_INPUT", message: "상품군이나 HS코드 중 하나 이상 입력해 주세요" });
+      return;
+    }
+    if (query.hs && !isHsCode(query.hs)) {
+      setState({ status: "error", error: "INVALID_INPUT", message: "HS코드는 숫자 6자리 또는 10자리예요 (예: 851830)" });
       return;
     }
     const requestId = ++latestRequest.current;
@@ -131,7 +135,7 @@ export function AnalyzeExplorer() {
           {state.query.hs && <SectionSkeleton cards={4} charts={2} />}
         </>
       )}
-      {state.status === "error" && <ErrorBox code={state.error} />}
+      {state.status === "error" && <ErrorBox code={state.error} message={state.message} />}
       {state.status === "done" && <Results result={state.result} />}
     </div>
   );
