@@ -1,4 +1,5 @@
 import type { TradeRow } from "@/lib/customs/parse";
+import type { MarketRow } from "@/lib/kosis/parse";
 import type { Yyyymm } from "@/lib/period";
 
 export type MonthlyImport = { month: Yyyymm; usd: number; kg: number; unitPrice: number | null };
@@ -84,4 +85,33 @@ export function summarizeImports(rows: TradeRow[], months: Yyyymm[]): ImportSumm
   );
 
   return { series, yoy, topCountries, asOf: series[series.length - 1].month };
+}
+
+export type MonthlyMarket = { month: Yyyymm; amount: number | null };
+
+export type MarketSummary = {
+  series: MonthlyMarket[]; // 최근 24개월, 단위 백만원
+  latest: number | null; // 최신 월 거래액
+  yoy: number | null; // 최근 3개월 합 vs 전년 동기 3개월 합
+  asOf: Yyyymm;
+};
+
+const MARKET_YOY_MONTHS = 3;
+
+/** KOSIS 행들을 화면용 시장 요약으로 만든다. 값이 있는 달이 하나도 없으면 null. */
+export function summarizeMarket(rows: MarketRow[]): MarketSummary | null {
+  if (!rows.some((row) => row.amount !== null)) return null;
+  const all = rows.map(({ month, amount }) => ({ month, amount }));
+  const series = all.slice(-SERIES_MONTHS);
+
+  const sumOf = (list: MonthlyMarket[]) =>
+    list.every((m) => m.amount !== null) ? list.reduce((sum, m) => sum + m.amount!, 0) : null;
+  const recent = all.slice(-MARKET_YOY_MONTHS);
+  const lastYear = all.slice(-(YEAR + MARKET_YOY_MONTHS), -YEAR);
+  const recentSum = sumOf(recent);
+  const lastYearSum = lastYear.length === MARKET_YOY_MONTHS ? sumOf(lastYear) : null;
+  const yoy = recentSum !== null && lastYearSum !== null ? calcYoy(recentSum, lastYearSum) : null;
+
+  const last = series[series.length - 1];
+  return { series, latest: last.amount, yoy, asOf: last.month };
 }
