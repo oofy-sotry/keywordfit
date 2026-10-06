@@ -50,9 +50,11 @@ export async function getInsight(category: MarketCategoryCode, hs: string): Prom
 
   const result = await getOrFetch(key, "ai-insight", TTL_SECONDS, async () => {
     await reserveAiCall();
+    const hsInfo = hsIndex.describe6(hs.slice(0, 6));
     const prompt = buildInsightPrompt({
       categoryName: categoryName(category),
-      hsLabel: hsIndex.describe6(hs.slice(0, 6))?.label ?? `HS ${hs}`,
+      hsLabel: hsInfo?.label ?? `HS ${hs}`,
+      hsHeading: hsInfo?.heading ?? "",
       metrics,
     });
     const { data } = await generateJson({ ...prompt, schema: RawSchema });

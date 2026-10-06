@@ -26,21 +26,24 @@ export function normalizeProductKey(product: string): string {
 }
 
 /** 코멘트 프롬프트 버전 (분류와 따로 올린다) */
-export const INSIGHT_PROMPT_VERSION = "insight-v2"; // v2: 문장 틀 캐시, metrics 필드 제거, 숫자 없는 지표 설명
+export const INSIGHT_PROMPT_VERSION = "insight-v3"; // v3: 상위 분류 전달, 최근 월=한 달 명시, ~요체·시사점 중심
 
 const INSIGHT_SYSTEM = `당신은 이커머스 셀러에게 시장 데이터를 해석해 주는 분석가다.
 제공된 지표만 근거로, 이 품목에 진입하려는 셀러에게 도움이 되는 코멘트 3~4개를 쓴다.
 규칙:
 - 수치는 절대 직접 쓰지 않는다. 숫자(0~9)를 한 글자도 쓰지 말고, 지표가 필요하면 {{marketYoy}}처럼 제공된 자리표시자만 쓴다.
-  (예: "온라인 시장은 {{marketYoy}} 성장했지만 수입은 {{importYoy}} 늘어 경쟁이 빨라지고 있어요.")
-- 각 코멘트는 자리표시자를 하나 이상 포함하고, 한국어 존댓말 한두 문장(80자 안팎)으로 쓴다.
+  (예: "온라인 시장은 {{marketYoy}} 커졌지만 수입은 {{importYoy}} 늘어 공급 경쟁도 빨라지고 있어요.")
+- 각 코멘트는 자리표시자를 하나 이상 포함한다. 수치를 다시 읽어 주는 데서 그치지 말고, 셀러에게 어떤 시사점이 있는지(경쟁, 소싱처, 가격대, 진입 시점 등)를 함께 쓴다.
+- 지표 설명에 적힌 기간·범위를 정확히 지킨다. 한 달 값을 석 달·한 해 규모라고 하지 않는다.
+- 품목 이름이 "기타"처럼 모호하면 상위 분류 이름으로 부른다. "기타 품목"이라고 쓰지 않는다.
+- 모든 문장은 "~요"로 끝나는 존댓말로 쓴다. "~니다"로 끝내지 않는다. 한두 문장, 80자 안팎.
 - 제공되지 않은 지표·추측(마진, 광고비, 검색량 등)은 말하지 않는다.
 - 시장 지표는 상품군 전체, 수입 지표는 해당 HS 품목이라는 점을 섞어 단정하지 않는다.`;
 
 /** AI에게 주는 지표 설명 — 숫자 없이 (화면 칩용 METRIC_LABELS는 숫자 포함). AI가 설명을 옮겨 써도 숫자 규칙에 걸리지 않게. */
 const PROMPT_METRIC_DESCRIPTIONS: Record<MetricKey, string> = {
-  marketYoy: "상품군 온라인 거래액의 최근 석 달 전년 대비 증감률",
-  marketLatest: "상품군의 가장 최근 월 온라인 거래액",
+  marketYoy: "상품군 온라인 거래액의 최근 한 해 전년 대비 증감률",
+  marketLatest: "상품군의 가장 최근 한 달 온라인 거래액 (석 달·한 해 합계가 아님)",
   importYoy: "이 품목 수입액의 최근 한 해 전년 대비 증감률",
   importRecent12: "이 품목의 최근 한 해 수입액",
   topCountry: "수입액 비중이 가장 큰 나라",
@@ -52,6 +55,7 @@ const PROMPT_METRIC_DESCRIPTIONS: Record<MetricKey, string> = {
 export function buildInsightPrompt(input: {
   categoryName: string;
   hsLabel: string;
+  hsHeading: string;
   metrics: InsightMetrics;
 }) {
   const lines = (Object.entries(input.metrics) as [MetricKey, string | null][])
@@ -59,6 +63,6 @@ export function buildInsightPrompt(input: {
     .map(([key, value]) => `{{${key}}} = ${value}  (${PROMPT_METRIC_DESCRIPTIONS[key]})`);
   return {
     system: INSIGHT_SYSTEM,
-    user: `상품군(온라인 시장): ${input.categoryName}\nHS 품목(수입): ${input.hsLabel}\n\n사용할 수 있는 지표:\n${lines.join("\n")}`,
+    user: `상품군(온라인 시장): ${input.categoryName}\nHS 품목(수입): ${input.hsLabel} (상위 분류: ${input.hsHeading})\n\n사용할 수 있는 지표:\n${lines.join("\n")}`,
   };
 }
