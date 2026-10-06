@@ -19,7 +19,7 @@ export type InsightMetrics = Record<MetricKey, string | null>;
 
 /** 화면 칩·프롬프트 설명용 이름 */
 export const METRIC_LABELS: Record<MetricKey, string> = {
-  marketYoy: "시장 성장률(최근 3개월, 전년 대비)",
+  marketYoy: "시장 성장률(최근 12개월, 전년 대비)",
   marketLatest: "최근 월 온라인 거래액",
   importYoy: "수입 증가율(최근 12개월, 전년 대비)",
   importRecent12: "최근 12개월 수입액",
