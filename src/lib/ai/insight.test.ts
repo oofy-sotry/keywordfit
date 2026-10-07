@@ -50,7 +50,7 @@ describe("getInsight", () => {
     });
     const { data } = await getInsight("0021", "851830", "client-1");
     expect(reserveAiCall).toHaveBeenCalledWith({ client: "client-1" });
-    expect(data.points).toEqual([{ text: "시장은 +8.1%, 수입은 +23.0% 늘었어요.", metrics: ["marketYoy", "importYoy"] }]);
+    expect(data.points).toEqual([{ text: "시장은 +8.1%, 수입은 23.0% 늘었어요.", metrics: ["marketYoy", "importYoy"] }]);
     expect(data.opportunity?.grade).toBe("growing");
     expect(data.metrics.topCountry).toBe("중국");
   });
@@ -79,7 +79,7 @@ describe("getInsight", () => {
     });
     const { data, cached } = await getInsight("0021", "851830");
     expect(cached).toBe(true);
-    expect(data.points).toEqual([{ text: "시장은 +9.9% 성장했어요.", metrics: ["marketYoy"] }]);
+    expect(data.points).toEqual([{ text: "시장은 9.9% 성장했어요.", metrics: ["marketYoy"] }]);
   });
 
   it("검증 후 남은 코멘트가 없으면 UPSTREAM_ERROR (캐시하지 않음)", async () => {

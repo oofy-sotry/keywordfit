@@ -69,6 +69,18 @@ const MAX_POINTS = 4;
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
 // 자리표시자 바로 뒤 조사 (뒤에 한글이 이어지면 조사가 아니라 단어의 일부라 제외)
 const PLACEHOLDER_WITH_PARTICLE = /\{\{(\w+)\}\}(?:(으로|로|이|가|은|는|을|를|과|와)(?![가-힣]))?/g;
+// 증감률 뒤 방향어 — 부호와 겹치면 어색하다 ("-22.6% 줄었어요")
+const DIRECTION_WORDS = {
+  "-": /^\s*(줄|감소|하락|떨어|축소)/,
+  "+": /^\s*(늘|증가|성장|상승|커|확대|오르|올라)/,
+} as const;
+
+/** 부호 있는 값 뒤에 같은 방향의 말이 오면 부호를 뺀다. 방향이 반대면 수치를 바꾸지 않도록 그대로 둔다. */
+function dropRedundantSign(value: string, rest: string): string {
+  const sign = value[0];
+  if (sign !== "+" && sign !== "-") return value;
+  return DIRECTION_WORDS[sign].test(rest) ? value.slice(1) : value;
+}
 
 /**
  * AI 코멘트를 그대로 믿지 않는다 (design.md §6.3).
@@ -121,8 +133,8 @@ export function fillInsight(templates: InsightTemplate[], metrics: InsightMetric
   return templates
     .filter((template) => template.metrics.every((key) => metrics[key] !== null))
     .map((template) => ({
-      text: template.text.replace(PLACEHOLDER_WITH_PARTICLE, (_, key: MetricKey, particle = "") => {
-        const value = metrics[key]!;
+      text: template.text.replace(PLACEHOLDER_WITH_PARTICLE, (match, key: MetricKey, particle = "", offset: number) => {
+        const value = dropRedundantSign(metrics[key]!, template.text.slice(offset + match.length));
         return value + (particle ? fixParticle(value, particle) : "");
       }),
       metrics: template.metrics,
