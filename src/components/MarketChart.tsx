@@ -3,6 +3,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartFrame, gridProps, monthAxisProps, TooltipBox, valueAxisProps } from "@/components/chartTheme";
 import { formatKrwMillion, formatMonth, krwAxisFormatter } from "@/lib/format";
+import { SOURCES } from "@/lib/sources";
 import type { MonthlyMarket } from "@/lib/metrics";
 
 function MarketTooltip({ active, payload }: { active?: boolean; payload?: { payload: MonthlyMarket }[] }) {
@@ -20,7 +21,7 @@ export function MarketChart({ title, series }: { title: string; series: MonthlyM
   // 한 축에 조·억이 섞이지 않게 최댓값 기준 단위 하나로
   const axisFormatter = krwAxisFormatter(Math.max(0, ...series.map((m) => m.amount ?? 0)));
   return (
-    <ChartFrame title={title}>
+    <ChartFrame title={title} source={SOURCES.kosis}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid {...gridProps} />

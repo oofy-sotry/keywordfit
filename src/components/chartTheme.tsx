@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { SourceNote } from "@/components/ui";
 import { formatShortMonth } from "@/lib/format";
+import type { DataSource } from "@/lib/sources";
 
 /** 차트 공통 스타일. 색은 globals.css 토큰만 쓴다. */
 
@@ -37,11 +39,14 @@ export function TooltipBox({ title, children }: { title: string; children: React
 }
 
 /** 차트 카드 (제목 = 단일 계열 이름이라 범례 없음) */
-export function ChartFrame({ title, children }: { title: string; children: ReactNode }) {
+export function ChartFrame({ title, source, children }: { title: string; source: DataSource; children: ReactNode }) {
   return (
     <figure className="rounded-xl border border-border bg-surface p-4">
       <figcaption className="mb-3 text-sm font-semibold">{title}</figcaption>
       <div className="h-60">{children}</div>
+      <div className="mt-2">
+        <SourceNote sources={[source]} />
+      </div>
     </figure>
   );
 }
