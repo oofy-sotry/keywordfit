@@ -20,12 +20,17 @@ export function SourceNote({ sources, prefix = "출처", note }: { sources: Data
   );
 }
 
-/** 요약 카드 */
-export function Card({ label, value }: { label: string; value: string }) {
+/** 요약 카드. source가 있으면 왼쪽 아래에 작게 출처 (카드 높이가 달라도 출처 줄은 바닥에 맞춤). */
+export function Card({ label, value, source }: { label: string; value: string; source?: DataSource }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col rounded-xl border border-border bg-surface p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+      {source && (
+        <div className="mt-auto pt-2">
+          <SourceNote sources={[source]} />
+        </div>
+      )}
     </div>
   );
 }
