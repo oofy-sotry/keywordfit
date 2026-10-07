@@ -133,14 +133,14 @@ describe("fillInsight", () => {
   it("요청 시점의 우리 데이터로 채운다 (캐시 후 수치가 바뀌어도 문장과 근거 칩이 일치)", () => {
     const fresh = { marketYoy: "+6.0%", unitPrice: "$81.00/kg" } as InsightMetrics;
     expect(fillInsight(templates, fresh)).toEqual([
-      { text: "시장은 +6.0% 성장했어요.", metrics: ["marketYoy"] },
+      { text: "시장은 6.0% 성장했어요.", metrics: ["marketYoy"] },
       { text: "단가는 $81.00/kg예요.", metrics: ["unitPrice"] },
     ]);
   });
 
   it("그사이 값이 없어진 지표를 쓰는 문장은 뺀다", () => {
     const partial = { marketYoy: "+6.0%", unitPrice: null } as InsightMetrics;
-    expect(fillInsight(templates, partial).map((p) => p.text)).toEqual(["시장은 +6.0% 성장했어요."]);
+    expect(fillInsight(templates, partial).map((p) => p.text)).toEqual(["시장은 6.0% 성장했어요."]);
   });
 
   it("채운 값의 받침에 맞게 바로 뒤 조사를 고친다", () => {
@@ -154,6 +154,32 @@ describe("fillInsight", () => {
       "미국이 첫위예요.",
       "$20.3억을 기록했어요.",
       "미국에서 들어와요.",
+    ]);
+  });
+
+  it("증감률 뒤에 같은 방향의 말이 오면 부호를 뺀다 (\"-22.6% 줄어\" → \"22.6% 줄어\")", () => {
+    const tpl = [
+      { text: "수입은 {{importYoy}} 줄어들었어요.", metrics: ["importYoy" as const] },
+      { text: "수입은 {{importYoy}}로 감소했어요.", metrics: ["importYoy" as const] },
+      { text: "시장은 {{marketYoy}} 커졌어요.", metrics: ["marketYoy" as const] },
+    ];
+    const values = { importYoy: "-22.6%", marketYoy: "+6.8%" } as InsightMetrics;
+    expect(fillInsight(tpl, values).map((p) => p.text)).toEqual([
+      "수입은 22.6% 줄어들었어요.",
+      "수입은 22.6%로 감소했어요.",
+      "시장은 6.8% 커졌어요.",
+    ]);
+  });
+
+  it("방향이 반대거나 방향어가 없으면 부호를 그대로 둔다 (수치를 바꾸지 않게)", () => {
+    const tpl = [
+      { text: "수입은 {{importYoy}} 늘었어요.", metrics: ["importYoy" as const] },
+      { text: "전년 대비 {{importYoy}}예요.", metrics: ["importYoy" as const] },
+    ];
+    const values = { importYoy: "-22.6%" } as InsightMetrics;
+    expect(fillInsight(tpl, values).map((p) => p.text)).toEqual([
+      "수입은 -22.6% 늘었어요.",
+      "전년 대비 -22.6%예요.",
     ]);
   });
 });
