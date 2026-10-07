@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ErrorBox } from "@/components/ui";
+import { ErrorBox, SourceNote } from "@/components/ui";
 import type { Insight } from "@/lib/ai/insight";
 import { METRIC_LABELS } from "@/lib/ai/insightMetrics";
 import type { ErrorCode } from "@/lib/errors";
 import type { MarketCategoryCode } from "@/lib/kosis/categories";
+import { SOURCES } from "@/lib/sources";
 
 type InsightResponse = { ok: true; data: Insight; cached: boolean } | { ok: false; error: ErrorCode };
 
@@ -84,6 +85,7 @@ export function InsightPanel({ category, hs }: { category: MarketCategoryCode; h
           <p className="text-xs text-muted">
             AI가 쓴 문장이에요. 문장 속 수치는 AI가 아니라 공공데이터 값으로 채웠어요 (근거 칩 참고).
           </p>
+          <SourceNote prefix="수치" sources={[SOURCES.kosis, SOURCES.customs]} note="문장: Google Gemini" />
         </>
       )}
     </section>
