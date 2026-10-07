@@ -267,7 +267,7 @@ type AnalyzeResponse =
 - 입력: 상품군 이름, HS 품명, **지표 키-값 표** (`marketYoY`, `importYoY`, `topCountry`, `topCountryShare`, `unitPriceYoY`, `opportunity` …)
 - 규칙: **문장에 숫자를 직접 쓰지 말고 `{{marketYoY}}` 같은 자리표시자만 쓴다.** 3~4개 포인트.
 - 출력 스키마: `{ points: { text: string }[] }` — 근거 지표는 **문장에 실제로 쓴 자리표시자**로 판정 (v1의 `metrics` 필드는 빠뜨리면 전체 실패라 v2에서 제거)
-- **캐시에는 자리표시자가 남은 문장 틀만 저장, 값은 매 요청 `fillInsight`로 지금 데이터에서 채움** — 채운 값 뒤 조사는 받침에 맞게 교정(`fixParticle`: "미국가" → "미국이")
+- **캐시에는 자리표시자가 남은 문장 틀만 저장, 값은 매 요청 `fillInsight`로 지금 데이터에서 채움** — 채운 값 뒤 조사는 받침에 맞게 교정(`fixParticle`: "미국가" → "미국이"). 증감률 바로 뒤에 같은 방향의 말이 오면 부호를 뺌("-22.6% 줄어" → "22.6% 줄어", 방향이 반대면 그대로)
 - 프롬프트 v6 규칙(D6 측정으로 추가): 상위 분류 이름 전달, 최근 월=한 달 명시, "~요"체, 시사점 중심, 시장은 상품군 이름으로, 수입 품목은 "이 품목"(공식 명칭 금지), 순위는 말로. 검증에 "자리표시자를 순위 숫자로 오용(`{{topCountry}}위`)" 제외 추가 → 같은 기준월에 KOSIS가 수치를 고쳐도 문장 속 수치와 근거 칩이 항상 일치
 - AI에게 주는 지표 설명은 숫자 없이("최근 석 달", "최근 한 해") — 설명을 옮겨 써도 숫자 규칙에 걸리지 않게. 화면 칩 이름은 숫자 포함
 - 지표 키(실제): `marketYoy`, `marketLatest`, `importYoy`, `importRecent12`, `topCountry`, `topCountryShare`, `unitPrice`, `opportunity` (`ai/insightMetrics.ts`, 값은 우리 데이터를 표시 형식으로)
