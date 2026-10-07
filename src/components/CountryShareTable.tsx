@@ -1,4 +1,6 @@
+import { SourceNote } from "@/components/ui";
 import type { CountryShare } from "@/lib/metrics";
+import { SOURCES } from "@/lib/sources";
 
 /** 최근 12개월 수입국 점유율. 막대는 보조, 수치는 텍스트로 항상 표시. */
 export function CountryShareTable({ shares }: { shares: CountryShare[] }) {
@@ -31,6 +33,9 @@ export function CountryShareTable({ shares }: { shares: CountryShare[] }) {
           ))}
         </tbody>
       </table>
+      <div className="mt-2">
+        <SourceNote sources={[SOURCES.customs]} />
+      </div>
     </figure>
   );
 }
