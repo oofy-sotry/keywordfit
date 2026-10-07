@@ -1,3 +1,4 @@
+import { SourceNote } from "@/components/ui";
 import { formatSignedPercent } from "@/lib/format";
 import {
   IMPORT_GROWTH_THRESHOLD,
@@ -5,6 +6,7 @@ import {
   type Opportunity,
   type OpportunityGrade,
 } from "@/lib/opportunity";
+import { SOURCES } from "@/lib/sources";
 
 /** 상태 색은 막대 표시에만, 의미는 아이콘 + 글자로 (색만으로 전달하지 않음) */
 const STYLE: Record<OpportunityGrade, { icon: string; bar: string }> = {
@@ -34,6 +36,9 @@ export function OpportunityBadge({ opportunity }: { opportunity: Opportunity }) 
           증가율 {formatSignedPercent(opportunity.importYoy)} (기준 {IMPORT_GROWTH_THRESHOLD}% 이상이면 증가) — 둘 다 최근
           12개월 전년 대비, 시장은 상품군 전체·수입은 해당 품목 기준
         </p>
+        <div className="mt-1">
+          <SourceNote sources={[SOURCES.kosis, SOURCES.customs]} note="KeywordFit 기준으로 계산" />
+        </div>
       </div>
     </section>
   );
