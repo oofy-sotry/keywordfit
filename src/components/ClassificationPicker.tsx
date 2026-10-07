@@ -1,5 +1,7 @@
+import { SourceNote } from "@/components/ui";
 import type { ProductClassification } from "@/lib/ai/classify";
 import { isMarketCategory, MARKET_CATEGORIES, type MarketCategoryCode } from "@/lib/kosis/categories";
+import { SOURCES } from "@/lib/sources";
 
 type Props = {
   product: string;
@@ -78,6 +80,11 @@ export function ClassificationPicker({ product, result, category, hs, disabled, 
           </label>
         ))}
       </fieldset>
+      <SourceNote
+        prefix="분류 기준"
+        sources={[SOURCES.kosis, SOURCES.hsCodes]}
+        note={result.source === "ai" ? "후보 선정: Google Gemini, 코드표로 검증" : "품명 검색"}
+      />
     </section>
   );
 }
