@@ -1,5 +1,24 @@
 import type { ReactNode } from "react";
 import { ERROR_MESSAGES, type ErrorCode } from "@/lib/errors";
+import type { DataSource } from "@/lib/sources";
+
+/** 항목 왼쪽 아래 작은 출처 표기. 이름은 원본 데이터 페이지 링크. prefix로 "출처" 대신 다른 머리말("수치")을 쓸 수 있다. */
+export function SourceNote({ sources, prefix = "출처", note }: { sources: DataSource[]; prefix?: string; note?: string }) {
+  return (
+    <p className="text-[11px] leading-snug text-muted">
+      {prefix}:{" "}
+      {sources.map((source, i) => (
+        <span key={source.url}>
+          {i > 0 && " · "}
+          <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+            {source.name}
+          </a>
+        </span>
+      ))}
+      {note && ` (${note})`}
+    </p>
+  );
+}
 
 /** 요약 카드 */
 export function Card({ label, value }: { label: string; value: string }) {
